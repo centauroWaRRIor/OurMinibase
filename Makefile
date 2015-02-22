@@ -14,5 +14,5 @@ compile:src/*/*.java
 	$(JAVAC) -cp $(CLASSPATH) -d bin src/*/*.java
 
 xx : compile
-	$(JAVA) -cp $(CLASSPATH):bin tests.BMTest
+	$(JAVA) -cp $(CLASSPATH):bin TestHashTable
 
