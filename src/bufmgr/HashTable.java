@@ -18,10 +18,17 @@ public class HashTable {
     	directory = new Bucket[HTSIZE];
     }
     
-    // This is the main API function. Pagenumber goes IN
-    // and FrameNumber comes OUT
-    public int HashThis(PageId pageNumber) {
-    	return 0;
+    /* This is the main API function. Pagenumber goes IN
+       and a Pair containing Pagenumber, FrameNumber 
+       comes OUT */
+    public Pair HashThis(PageId pageNumber) {
+    	
+    	Pair result; // Empty Pair by default
+    	Bucket directoryEntry;
+    	directoryEntry = directory[h(pageNumber.pid)];
+    	result = directoryEntry.search(pageNumber);
+    	// If not found, result will be empty
+    	return result;
     }
     
     private Integer h(Integer value) {
@@ -34,20 +41,10 @@ public class HashTable {
 class Bucket {
 	 /* Linked List Declaration */
     private LinkedList<Pair> linkedlist;
-    
-    Pair getFirst() {
-    	// Placeholder
-		return null;    	
-    }
-    
-    Pair getNext() {
-    	// Placeholder
-		return null;    	
-    }
-    
-    Boolean search(Pair aPair) {
+        
+    Pair search(PageId aPageId) {
     	//Placeholder
-    	return false;
+    	return null;
     }
 }
 
@@ -59,7 +56,13 @@ class Pair {
         this.pageNumber = pageNumber;
         this.frameNumber = frameNumber;
     }
-
+    
+    public Pair() {
+    	// Create an empty Pair by default
+    	pageNumber.pid = -1;
+    	frameNumber = -1;
+    }
+    
     public void setPageNumber(PageId pageNumber) {
         this.pageNumber = pageNumber;
     }
@@ -74,5 +77,9 @@ class Pair {
 
     public Integer getFrameNumber() {
         return frameNumber;
+    }
+    
+    public Boolean isPageEmpty() {
+    	return (pageNumber.pid == -1 && frameNumber == -1);
     }
 }
