@@ -7,19 +7,27 @@ import global.PageId;
 public class HashTable {
 
 	private Bucket [] directory;
+	private Integer HTSIZE; 
 	
     public HashTable(int tableSize) {
     	if(tableSize < 0) {
     		throw new IllegalArgumentException("Table size must be positive.");
     	}
     	// Allocate the table which is initially all null bucket references
-    	directory = new Bucket[tableSize];
+    	HTSIZE = tableSize;
+    	directory = new Bucket[HTSIZE];
     }
     
     // This is the main API function. Pagenumber goes IN
     // and FrameNumber comes OUT
     public int HashThis(PageId pageNumber) {
     	return 0;
+    }
+    
+    private Integer h(Integer value) {
+    	final Integer a = 1; // TODO: Figure out a good a value
+    	final Integer b = 1; // TODO: Figure out a good b value
+    	return ((a*value + b) % HTSIZE);
     }
 }
 
