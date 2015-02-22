@@ -21,10 +21,10 @@ public class HashTable {
     	directory = new Bucket[HTSIZE];
     }
     
-    /* This is the main API function. Pagenumber goes IN
+    /* Pagenumber goes IN for hash table lookup
        and a Pair containing Pagenumber, FrameNumber 
-       comes OUT */
-    public Pair HashThis(PageId pageNumber) 
+       comes OUT if found. Otherwise throws exception */
+    public Pair hashThis(PageId pageNumber) 
         throws HashEntryNotFoundException {
  	   	
     	Pair result; // Empty Pair by default
@@ -36,6 +36,14 @@ public class HashTable {
     				"PageID is not found in the buffer pool");
     	else 
     	   return result;
+    }
+    
+    public void insertEntry(Pair aPair) {
+    	// Placeholder
+    }
+    
+    public void deleteEntry(PageId pageNumber) {
+    	// Placeholder
     }
     
     private Integer h(Integer value) {
