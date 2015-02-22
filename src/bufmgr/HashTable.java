@@ -1,6 +1,10 @@
 package bufmgr;
 
+import java.io.IOException;
 import java.util.LinkedList;
+
+import diskmgr.FileIOException;
+import diskmgr.InvalidPageNumberException;
 import global.PageId;
 
 public class HashTable {
@@ -20,14 +24,18 @@ public class HashTable {
     /* This is the main API function. Pagenumber goes IN
        and a Pair containing Pagenumber, FrameNumber 
        comes OUT */
-    public Pair HashThis(PageId pageNumber) {
-    	
+    public Pair HashThis(PageId pageNumber) 
+        throws HashEntryNotFoundException {
+ 	   	
     	Pair result; // Empty Pair by default
     	Bucket directoryEntry;
     	directoryEntry = directory[h(pageNumber.pid)];
     	result = directoryEntry.search(pageNumber);
-    	// If not found, result will be empty
-    	return result;
+    	if(result.isPairEmpty())
+    		throw new HashEntryNotFoundException(null,
+    				"PageID is not found in the buffer pool");
+    	else 
+    	   return result;
     }
     
     private Integer h(Integer value) {
@@ -93,7 +101,7 @@ class Pair {
     			frameNumber == aPair.frameNumber);
     }
     
-    public Boolean isPageEmpty() {
+    public Boolean isPairEmpty() {
     	return (pageNumber.pid == -1 && frameNumber == -1);
     }
 }
