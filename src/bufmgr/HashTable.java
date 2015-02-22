@@ -1,9 +1,6 @@
 package bufmgr;
 
 import java.util.LinkedList;
-
-import com.sun.xml.internal.bind.v2.runtime.reflect.ListIterator;
-
 import global.PageId;
 
 public class HashTable {
