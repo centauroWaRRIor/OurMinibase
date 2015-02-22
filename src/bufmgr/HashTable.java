@@ -2,6 +2,8 @@ package bufmgr;
 
 import java.util.LinkedList;
 
+import com.sun.xml.internal.bind.v2.runtime.reflect.ListIterator;
+
 import global.PageId;
 
 public class HashTable {
@@ -40,11 +42,21 @@ public class HashTable {
 
 class Bucket {
 	 /* Linked List Declaration */
-    private LinkedList<Pair> linkedlist;
-        
-    Pair search(PageId aPageId) {
-    	//Placeholder
-    	return null;
+    private LinkedList<Pair> linkedList;
+    
+    public Bucket() {
+    	linkedList = new LinkedList<Pair>();
+    }
+    
+    public Pair search(PageId aPageId) {
+    	Pair nextPage;
+    	// Look for the given pageId in this bucket
+        for (int i = 0; i < linkedList.size(); i++) {
+            nextPage = linkedList.get(i); 
+            if(nextPage.equals(aPageId))
+            	return nextPage;
+        }
+    	return new Pair(); // Returns empty pair
     }
 }
 
@@ -77,6 +89,11 @@ class Pair {
 
     public Integer getFrameNumber() {
         return frameNumber;
+    }
+    
+    public Boolean isEqual(Pair aPair) {
+    	return (pageNumber == aPair.pageNumber &&
+    			frameNumber == aPair.frameNumber);
     }
     
     public Boolean isPageEmpty() {
