@@ -1,10 +1,7 @@
 package bufmgr;
 
-import java.io.IOException;
 import java.util.LinkedList;
 
-import diskmgr.FileIOException;
-import diskmgr.InvalidPageNumberException;
 import global.PageId;
 
 public class HashTable {
@@ -39,13 +36,21 @@ public class HashTable {
     }
     
     public void insertEntry(Pair aPair) {
-    	// Placeholder
+    	Bucket directoryEntry;
+    	directoryEntry = directory[h(aPair.getPageNumber().pid)];
+    	directoryEntry.insert(aPair);	    
     }
     
-    public void deleteEntry(PageId pageNumber) {
-    	// Placeholder
+    public void deleteEntry(Pair aPair) 
+    		throws HashEntryNotFoundException {
+    	Bucket directoryEntry;
+    	directoryEntry = directory[h(aPair.getPageNumber().pid)];
+    	if(!directoryEntry.delete(aPair))
+    		throw new HashEntryNotFoundException(null,
+    				"PageID is not found in the buffer pool");
     }
     
+    // hash function is internal to the class
     private Integer h(Integer value) {
     	final Integer a = 1; // TODO: Figure out a good a value
     	final Integer b = 1; // TODO: Figure out a good b value
@@ -70,6 +75,16 @@ class Bucket {
             	return nextPage;
         }
     	return new Pair(); // Returns empty pair
+    }
+    
+    public void insert(Pair newPair) {
+    	// Don't allow duplicates
+    	if(!linkedList.contains(newPair))
+    	   linkedList.add(newPair);
+    }
+    
+    public Boolean delete(Pair newPair) {
+    	return linkedList.remove(newPair);
     }
 }
 
