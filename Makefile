@@ -6,7 +6,7 @@ BINPATH = $(JDKPATH)/bin
 JAVAC = $(JDKPATH)/bin/javac 
 JAVA  = $(JDKPATH)/bin/java 
 
-PROGS = xx
+PROGS = xx yy
 
 all: $(PROGS)
 
@@ -16,3 +16,7 @@ compile:src/*/*.java
 xx : compile
 	$(JAVA) -cp $(CLASSPATH):bin TestHashTable
 
+
+yy: compile
+	$(JAVA) -cp $(CLASSPATH):bin tests.MyTest
+    

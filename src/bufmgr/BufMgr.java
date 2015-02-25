@@ -3,6 +3,32 @@ package bufmgr;
 import global.Page;
 import global.PageId;
 
+import global.Minibase;
+
+class Frame 
+{
+    public Frame( PageId pid, Page pg )
+    {
+        this.pid = pid;
+        this.pg = pg;
+        pin_count = 1;
+        dirty = false;
+    }
+
+    public void setPage(PageId pid, Page pg )
+    {
+        this.pid = pid;
+        this.pg = pg;
+    }
+
+    /* public for now */
+    public PageId pid;
+    public Page pg;
+    public int pin_count;
+    public boolean dirty;
+
+}
+
 
 public class BufMgr {
 	/**
@@ -14,7 +40,10 @@ public class BufMgr {
 	* @param​lookAheadSize number of pages to be looked ahead
 	* @param​replacementPolicy Name of the replacement policy
 	*/
-	public BufMgr(int numbufs, int lookAheadSize, String replacementPolicy) {}
+	public BufMgr(int numbufs, int lookAheadSize, String replacementPolicy) {
+        this.frames = new Frame[numbufs];
+        this.numbufs = numbufs;
+    }
 	/**
 	* Pin a page.
 	* First check if this page is already in the buffer pool.
@@ -33,7 +62,13 @@ public class BufMgr {
 	* @param page the pointer point to the page.
 	* @param emptyPage true (empty page); false (non­empty page)
 	*/
-	public void pinPage(PageId pageno, Page page, boolean emptyPage) {}
+	public void pinPage(PageId pageno, Page page, boolean emptyPage) 
+    {
+        System.out.print( "\n pinPage::page id: [" + pageno.pid + "]" );
+
+        Frame f = getLIRSFrame();
+        f.setPage(pageno, page);
+    }
 	/**
 	* Unpin a page specified by a pageId.
 	* This method should be called with dirty==true if the client has
@@ -50,7 +85,25 @@ public class BufMgr {
 	* @param pageno page number in the Minibase.
 	* @param dirty the dirty bit of the frame
 	*/
-	public void unpinPage(PageId pageno, boolean dirty) {}
+	public void unpinPage(PageId pageno, boolean dirty) 
+    {
+        System.out.print( "\n unpinPage::page id: [" + pageno.pid + "]" );
+        Frame f = getFrame(pageno);
+
+        if( f.pin_count > 0 ) 
+            f.pin_count--;
+
+        if( f.pin_count <= 0 )
+        {
+            if( f.dirty )
+                Minibase.DiskManager.write_page(pageno, f.pg);
+
+            // make it available:
+            f.pid = null;
+            f.pg = null;
+        }
+
+    }
 	/**
 	* Allocate new pages.* Call DB object to allocate a run of new pages and
 	* find a frame in the buffer pool for the first page
@@ -64,8 +117,13 @@ public class BufMgr {
 	*
 	* @return the first page id of the new pages.__ null, if error.
 	*/
-	public PageId newPage(Page firstpage, int howmany) {
-		return null;}
+	public PageId newPage(Page firstpage, int howmany) 
+    {
+        PageId pid = new PageId();
+        Minibase.DiskManager.allocate_page(pid, howmany);
+        pinPage(pid, firstpage);
+		return pid;
+    }
 	/**
 	* This method should be called to delete a page that is on disk.
 	* This routine must call the method in diskmgr package to
@@ -96,5 +154,33 @@ public class BufMgr {
 	*/
 	public int getNumUnpinned() {
 		return 0;}
+
+    /* need to replace the following with a Priority Queue: */
+    Frame getLIRSFrame()
+    {
+        for( int i = 0; i < numbufs; i++ )
+        {
+            if( frames[i].page == null )
+                return frames[i];
+        }
+
+        System.out.println( "Whoops - out of frames!\n" );
+        return null;
+    }
+
+    /* need to replace the following with our hash table */
+    Frame getFrame(PageId pid)
+    {
+        for( int i = 0; i < numbuf; i++ )
+        {
+            if( frames[i].page != null && frames[i].pid == pid )
+                return frames[i];
+        }
+
+        return null;
+    }
+
+    static private Frame frames[];
+    static int numbufs;
 	
 }
