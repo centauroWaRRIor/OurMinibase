@@ -21,7 +21,7 @@ public class HashTable {
     /* Pagenumber goes IN for hash table lookup
        and a Pair containing Pagenumber, FrameNumber 
        comes OUT if found. Otherwise throws exception */
-    public Pair hashThis(PageId pageNumber) 
+    public Pair hashKey(PageId pageNumber) 
         throws HashEntryNotFoundException {
  	   	
     	Pair result; // Empty Pair by default

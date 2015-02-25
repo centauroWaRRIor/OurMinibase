@@ -5,32 +5,13 @@ import global.PageId;
 
 import global.Minibase;
 
-class Frame 
-{
-    public Frame( PageId pid, Page pg )
-    {
-        this.pid = pid;
-        this.pg = pg;
-        pin_count = 1;
-        dirty = false;
-    }
-
-    public void setPage(PageId pid, Page pg )
-    {
-        this.pid = pid;
-        this.pg = pg;
-    }
-
-    /* public for now */
-    public PageId pid;
-    public Page pg;
-    public int pin_count;
-    public boolean dirty;
-
-}
-
-
 public class BufMgr {
+	
+    private Frame frames[];
+    private int numbufs;
+    private String replacementPolicy;
+    private HashTable hashTable;
+	
 	/**
 	* Create the BufMgr object.
 	* Allocate pages (frames) for the buffer pool in main memory and
@@ -41,8 +22,10 @@ public class BufMgr {
 	* @param​replacementPolicy Name of the replacement policy
 	*/
 	public BufMgr(int numbufs, int lookAheadSize, String replacementPolicy) {
-        this.frames = new Frame[numbufs];
+        frames = new Frame[numbufs];
+        hashTable = new HashTable(numbufs);
         this.numbufs = numbufs;
+        this.replacementPolicy = replacementPolicy;
     }
 	/**
 	* Pin a page.
@@ -64,10 +47,43 @@ public class BufMgr {
 	*/
 	public void pinPage(PageId pageno, Page page, boolean emptyPage) 
     {
-        System.out.print( "\n pinPage::page id: [" + pageno.pid + "]" );
+		// TODO: Throw BufferPoolExceededException
+		Pair mgmInfo = null;
+		try {
+			mgmInfo = hashTable.hashKey(pageno);
+		} catch (HashEntryNotFoundException e) {
+			//e.printStackTrace();
+			// Find a candidate for replacement
+			// TODO: Implement getLITSFrame
+			// TODO: getLIRSFrame may throw BufferPoolExceededException
+			Pair replacementCandidate = getLIRSFrame();
+	        Integer replacementIndex = replacementCandidate.getFrameNumber();
+	        // Flush replacement page before reusing
+	        if(frames[replacementIndex].isFrameDirty())
+	           flushPage(frames[replacementIndex].getPageId());
+	        // Erase old entry from hashTable 
+	        hashTable.deleteEntry(replacementCandidate); // TODO: Handle possible exception thrown here
+	        // Add new entry to hashtable
+	        replacementCandidate.setPageNumber(pageno);
+	        hashTable.insertEntry(replacementCandidate);
+	        // Update mgmInfo so control flow can continue as 
+	        // if nothing happened 
+	        mgmInfo = replacementCandidate;
+		}
+		// Assume mgmInfo contains the frame location
+		// for the given page from now on
+		
+		// If the page was a replacement candidate, it no
+		// longer is
+		Integer frameIndex = mgmInfo.getFrameNumber(); 
+		if(frames[frameIndex].isReplacementCandidate())
+			frames[frameIndex].setReplacementCandidate(false);
 
-        Frame f = getLIRSFrame();
-        f.setPage(pageno, page);
+		// Increment pinCount
+		frames[frameIndex].IncPinCount();
+		
+		// TODO: is it setpage or setPage?
+		page.setpage(frames[frameIndex].getFrameData());		
     }
 	/**
 	* Unpin a page specified by a pageId.
@@ -87,21 +103,21 @@ public class BufMgr {
 	*/
 	public void unpinPage(PageId pageno, boolean dirty) 
     {
-        System.out.print( "\n unpinPage::page id: [" + pageno.pid + "]" );
-        Frame f = getFrame(pageno);
-
-        if( f.pin_count > 0 ) 
-            f.pin_count--;
-
-        if( f.pin_count <= 0 )
-        {
-            if( f.dirty )
-                Minibase.DiskManager.write_page(pageno, f.pg);
-
-            // make it available:
-            f.pid = null;
-            f.pg = null;
-        }
+//        System.out.print( "\n unpinPage::page id: [" + pageno.pid + "]" );
+//        Frame f = getFrame(pageno);
+//
+//        if( f.pin_count > 0 ) 
+//            f.pin_count--;
+//
+//        if( f.pin_count <= 0 )
+//        {
+//            if( f.dirty )
+//                Minibase.DiskManager.write_page(pageno, f.pg);
+//
+//            // make it available:
+//            f.pid = null;
+//            f.pg = null;
+//        }
 
     }
 	/**
@@ -119,10 +135,11 @@ public class BufMgr {
 	*/
 	public PageId newPage(Page firstpage, int howmany) 
     {
-        PageId pid = new PageId();
-        Minibase.DiskManager.allocate_page(pid, howmany);
-        pinPage(pid, firstpage);
-		return pid;
+//        PageId pid = new PageId();
+//        Minibase.DiskManager.allocate_page(pid, howmany);
+//        pinPage(pid, firstpage);
+//		return pid;
+return null;
     }
 	/**
 	* This method should be called to delete a page that is on disk.
@@ -155,32 +172,88 @@ public class BufMgr {
 	public int getNumUnpinned() {
 		return 0;}
 
-    /* need to replace the following with a Priority Queue: */
-    Frame getLIRSFrame()
-    {
-        for( int i = 0; i < numbufs; i++ )
-        {
-            if( frames[i].page == null )
-                return frames[i];
-        }
+//    /* need to replace the following with a Priority Queue: */
+//    Frame getLIRSFrame()
+//    {
+//        for( int i = 0; i < numbufs; i++ )
+//        {
+//            if( frames[i].page == null )
+//                return frames[i];
+//        }
+//
+//        System.out.println( "Whoops - out of frames!\n" );
+//        return null;
+//    }
+//
+//    /* need to replace the following with our hash table */
+//    Frame getFrame(PageId pid)
+//    {
+//        for( int i = 0; i < numbuf; i++ )
+//        {
+//            if( frames[i].page != null && frames[i].pid == pid )
+//                return frames[i];
+//        }
+//
+//        return null;
+//    }	
+}
 
-        System.out.println( "Whoops - out of frames!\n" );
-        return null;
-    }
+class Frame 
+{
+   private PageId pid;
+   private Page pg;
+   private Integer pinCount;
+   private Boolean isDirty;
+   private Boolean isReplacementCandidate;
+    
+   public Frame() {
+      pid = new PageId();
+      pg = new Page();
+      resetFrame();
+   }
 
-    /* need to replace the following with our hash table */
-    Frame getFrame(PageId pid)
-    {
-        for( int i = 0; i < numbuf; i++ )
-        {
-            if( frames[i].page != null && frames[i].pid == pid )
-                return frames[i];
-        }
-
-        return null;
-    }
-
-    static private Frame frames[];
-    static int numbufs;
-	
+   public void setPageId(PageId pid) {
+      this.pid = pid;
+   }
+   
+   public void IncPinCount() {
+     pinCount++;
+   }
+   
+   // TODO: Maybe throw an exception when pin_count is negative? 
+   public void DecrPinCount() {
+     pinCount--;
+     if(pinCount == 0)
+    	 isReplacementCandidate = true;
+   }
+   
+   public void setReplacementCandidate(Boolean value) {
+	   isReplacementCandidate = value;
+   }
+   
+   public Boolean isFrameDirty() {
+	   return isDirty;
+   }
+   
+   public Boolean isReplacementCandidate() {
+	   return isReplacementCandidate;
+   }
+   
+   public Integer getPinCount() {
+	   return pinCount;
+   }
+   
+   public PageId getPageId() {
+	   return pid;
+   }
+   
+   public byte[] getFrameData() {
+	   return pg.getpage();
+   }
+   
+   public void resetFrame() {
+	   pinCount = 0;
+	   isDirty = false;
+	   isReplacementCandidate = false;
+   }
 }
