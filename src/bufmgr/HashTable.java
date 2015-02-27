@@ -59,7 +59,7 @@ public class HashTable {
 }
 
 class Bucket {
-	 /* Linked List Declaration */
+	/* Linked List Declaration */
     private LinkedList<Pair> linkedList;
     
     public Bucket() {
@@ -67,12 +67,12 @@ class Bucket {
     }
     
     public Pair search(PageId aPageId) {
-    	Pair nextPage;
+    	Pair page;
     	// Look for the given pageId in this bucket
-        for (int i = 0; i < linkedList.size(); i++) {
-            nextPage = linkedList.get(i); 
-            if(nextPage.equals(aPageId))
-            	return nextPage;
+    	int i = linkedList.indexOf(aPageId);
+    	if(i != -1) {
+           page = linkedList.get(i);
+           return page;
         }
     	return new Pair(); // Returns empty pair
     }
@@ -103,6 +103,12 @@ class Pair {
     	frameNumber = -1;
     }
     
+    public Pair(Pair o) {
+    	// Copy constructor
+    	pageNumber = new PageId(o.pageNumber.pid);
+    	frameNumber = o.frameNumber;
+    }
+    
     public void setPageNumber(PageId pageNumber) {
         this.pageNumber = pageNumber;
     }
@@ -118,13 +124,30 @@ class Pair {
     public Integer getFrameNumber() {
         return frameNumber;
     }
-    
-    public Boolean isEqual(Pair aPair) {
-    	return (pageNumber == aPair.pageNumber &&
-    			frameNumber == aPair.frameNumber);
-    }
-    
+        
     public Boolean isPairEmpty() {
     	return (pageNumber.pid == -1 && frameNumber == -1);
+    }
+    
+    // Overriding equals() to compare two LIRS_Pair objects
+    public boolean equals(Object o) {
+ 
+        // If the object is compared with itself then return true  
+        if (o == this) {
+            return true;
+        }
+ 
+        /* Check if o is an instance of LIRS_Pair or not
+          "null instanceof [type]" also returns false */
+        if (!(o instanceof Pair)) {
+            return false;
+        }
+         
+        // typecast o to Complex so that we can compare data members 
+        Pair c = (Pair) o;
+         
+        // Compare the relevant data members and return accordingly 
+        return c.pageNumber == this.pageNumber &&
+        	   c.frameNumber == this.frameNumber;
     }
 }

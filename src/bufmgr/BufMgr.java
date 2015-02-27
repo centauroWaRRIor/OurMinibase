@@ -9,8 +9,9 @@ public class BufMgr {
 	
     private Frame frames[];
     private int numbufs;
-    private String replacementPolicy;
+    private String replacementPolicyString;
     private HashTable hashTable;
+    private LIRS replacementPolicy;
 	
 	/**
 	* Create the BufMgr object.
@@ -24,8 +25,9 @@ public class BufMgr {
 	public BufMgr(int numbufs, int lookAheadSize, String replacementPolicy) {
         frames = new Frame[numbufs];
         hashTable = new HashTable(numbufs);
+        this.replacementPolicy = new LIRS();
         this.numbufs = numbufs;
-        this.replacementPolicy = replacementPolicy;
+        this.replacementPolicyString = replacementPolicy;
     }
 	/**
 	* Pin a page.
@@ -54,9 +56,8 @@ public class BufMgr {
 		} catch (HashEntryNotFoundException e) {
 			//e.printStackTrace();
 			// Find a candidate for replacement
-			// TODO: Implement getLITSFrame
-			// TODO: getLIRSFrame may throw BufferPoolExceededException
-			Pair replacementCandidate = getLIRSFrame();
+			// TODO: line below may throw BufferPoolExceededException
+			Pair replacementCandidate = replacementPolicy.getReplacementCandidate();
 	        Integer replacementIndex = replacementCandidate.getFrameNumber();
 	        // Flush replacement page before reusing
 	        if(frames[replacementIndex].isFrameDirty())
