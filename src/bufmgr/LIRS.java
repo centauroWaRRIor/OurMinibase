@@ -1,12 +1,13 @@
 package bufmgr;
 
+import global.PageId;
 import java.util.LinkedList;
 
 public class LIRS {
 
 	/* Linked List Declaration */
-    private LinkedList<Pair> freeList; // Looks here first
-    private LinkedList<LIRS_Pair> candidateList; // Looks here second
+    private LinkedList<Pair> freeList; // LIRS looks here first
+    private LinkedList<LIRS_Pair> candidateList; // LIRS looks here second
     private Integer globalCount; // Gets incremented every time a page gets accessed
 	private LIRS_Pair victim;
 	
@@ -21,14 +22,18 @@ public class LIRS {
 	/* We need to return a Pair object so that we can
 	 * plug that object into HashTable.delete() in turn
 	 */
-	public Pair getReplacementCandidate() {
+	public Pair getReplacementCandidate(PageId targetPage) {
 		Pair returnCandidate = null;
 		// Look under free list first
 		if(!freeList.isEmpty()) {
-			returnCandidate = freeList.getFirst();
+			returnCandidate = freeList.removeFirst();
+			returnCandidate.setPageId(targetPage);
+			LIRS_Pair tmpLIRSEntry = new LIRS_Pair(returnCandidate);
+			// Start tracking this page with the LIRS algorithm
+			candidateList.add(tmpLIRSEntry);
 		}
 		else { // Now look for a candidate using LIRS
-		   computeStats();
+		   computeStats(); // Updates Stats for all candidates being tracked by LIRS
 		   returnCandidate = victim.getCandidateInfo();
 		   victim.reset(); // reset statistics for this victim
 		}
@@ -36,22 +41,14 @@ public class LIRS {
 	}
 	
 	public void insertFreeListEntry (Pair entry) {
-		LIRS_Pair tempEntry = new LIRS_Pair();
-		tempEntry.setCandidateInfo(entry); 
+		// Remove from list of candidates being tracked by LIRS
+		LIRS_Pair tempEntry = new LIRS_Pair(entry);
 	    candidateList.remove(tempEntry);
+	    // Now add to list of free pages
 		freeList.add(entry);
 	}
 	
-	public void deleteFreeListEntry(Pair entry) {
-		LIRS_Pair tempEntry = new LIRS_Pair();
-		tempEntry.setCandidateInfo(entry); 
-		if(freeList.remove(entry)) {
-			// Start tracking this page with the LIRS algorithm
-			candidateList.add(tempEntry);
-		}		
-	}
-	
-	public void updateEntryAccess(Pair entry) {
+	public void updatePageAccessStats(Pair entry) {
     	LIRS_Pair candidate;
     	// Look for the given page
     	int i = candidateList.indexOf(entry);
@@ -88,101 +85,107 @@ public class LIRS {
 	private void incGlobalCount() {
 		globalCount++; // TODO: Add wrapping around when spilled	
 	}
+	
+	private class LIRS_Pair {
+		
+	    Pair candidateInfo; // Stores page number and buffer's pool frame index
+	    Integer reuseDistance;
+	    Integer recency;
+	    Integer weight;
+	    Integer lastAccessed; // Value of globalCount last time 
+	                            // this page was accessed.
+	    
+	    public LIRS_Pair() {
+	    	reset();
+	    }
+	    
+	    public LIRS_Pair(Pair candidateInfo) {
+	    	reset();
+	    	this.candidateInfo = new Pair(candidateInfo);
+	    }
+	    
+	    public void reset() {
+	    	candidateInfo = null;
+	    	reuseDistance = Integer.MAX_VALUE;
+	    	recency = Integer.MAX_VALUE;
+	    	weight = 0;
+	    	lastAccessed = 0;    	
+	    }
+	    
+	    public Pair getCandidateInfo() {
+	    	return candidateInfo;
+	    }
+	    
+	    public Integer getWeight() {
+	    	return weight;
+	    }
+	    
+	    public void setCandidateInfo(Pair pair) {
+	    	candidateInfo = new Pair(pair);
+	    }
+	    
+	    public void updateRecency() {
+	    	recency = 0;
+	    }
+	    
+	    public void updateLastAccessed(Integer value) {
+	    	lastAccessed = value;
+	    }
+	    
+	    public void computeWeight(Integer globalCount) {
+	    	
+	    	recency += computeDeltaCount(globalCount);
+	    	reuseDistance = computeDeltaCount(globalCount);
+	    	weight = Integer.max(recency, reuseDistance);
+	    }
+	    
+	    public Integer computeDeltaCount(Integer globalCount) {
+	    	return (globalCount - lastAccessed);// TODO: Account for wrapping
+	    }
+//	    public Pair search(PageId aPageId) {
+//	    	Pair nextPage;
+//	    	// Look for the given pageId in this bucket
+//	        for (int i = 0; i < linkedList.size(); i++) {
+//	            nextPage = linkedList.get(i); 
+//	            if(nextPage.equals(aPageId))
+//	            	return nextPage;
+//	        }
+//	    	return new Pair(); // Returns empty pair
+//	    }
+	//    
+//	    public void insert(Pair newPair) {
+//	    	// Don't allow duplicates
+//	    	if(!linkedList.contains(newPair))
+//	    	   linkedList.add(newPair);
+//	    }
+	//    
+//	    public Boolean delete(Pair newPair) {
+//	    	return linkedList.remove(newPair);
+//	    }
+	    
+	    // Overriding equals() to compare two LIRS_Pair objects
+	    public boolean equals(Object o) {
+	 
+	        // If the object is compared with itself then return true  
+	        if (o == this) {
+	            return true;
+	        }
+	 
+	        /* Check if o is an instance of LIRS_Pair or not
+	          "null instanceof [type]" also returns false */
+	        if (!(o instanceof LIRS_Pair)) {
+	            return false;
+	        }
+	         
+	        // typecast o to Complex so that we can compare data members 
+	        LIRS_Pair c = (LIRS_Pair) o;
+	         
+	        if(c.candidateInfo != null)
+	           // Compare the relevant data members and return accordingly 
+	           return c.candidateInfo.equals(this.candidateInfo);
+	        else
+	        	return false;
+	    }
+	}
 }
 
-class LIRS_Pair {
-	/* Linked List Declaration */
-    Pair candidateInfo;
-    Integer reuseDistance;
-    Integer recency;
-    Integer weight;
-    Integer lastAccessed; // Value of globalCount last time 
-                            // this page was accessed.
-    
-    public LIRS_Pair() {
-    	reset();
-    }
-    
-    public void reset() {
-    	candidateInfo = null;
-    	reuseDistance = Integer.MAX_VALUE;
-    	recency = Integer.MAX_VALUE;
-    	weight = 0;
-    	lastAccessed = 0;    	
-    }
-    
-    public Pair getCandidateInfo() {
-    	return candidateInfo;
-    }
-    
-    public Integer getWeight() {
-    	return weight;
-    }
-    
-    public void setCandidateInfo(Pair pair) {
-    	candidateInfo = new Pair(pair);
-    }
-    
-    public void updateRecency() {
-    	recency = 0;
-    }
-    
-    public void updateLastAccessed(Integer value) {
-    	lastAccessed = value;
-    }
-    
-    public void computeWeight(Integer globalCount) {
-    	
-    	recency += computeDeltaCount(globalCount);
-    	reuseDistance = computeDeltaCount(globalCount);
-    	weight = Integer.max(recency, reuseDistance);
-    }
-    
-    public Integer computeDeltaCount(Integer globalCount) {
-    	return (globalCount - lastAccessed);// TODO: Account for wrapping
-    }
-//    public Pair search(PageId aPageId) {
-//    	Pair nextPage;
-//    	// Look for the given pageId in this bucket
-//        for (int i = 0; i < linkedList.size(); i++) {
-//            nextPage = linkedList.get(i); 
-//            if(nextPage.equals(aPageId))
-//            	return nextPage;
-//        }
-//    	return new Pair(); // Returns empty pair
-//    }
-//    
-//    public void insert(Pair newPair) {
-//    	// Don't allow duplicates
-//    	if(!linkedList.contains(newPair))
-//    	   linkedList.add(newPair);
-//    }
-//    
-//    public Boolean delete(Pair newPair) {
-//    	return linkedList.remove(newPair);
-//    }
-    
-    // Overriding equals() to compare two LIRS_Pair objects
-    public boolean equals(Object o) {
- 
-        // If the object is compared with itself then return true  
-        if (o == this) {
-            return true;
-        }
- 
-        /* Check if o is an instance of LIRS_Pair or not
-          "null instanceof [type]" also returns false */
-        if (!(o instanceof LIRS_Pair)) {
-            return false;
-        }
-         
-        // typecast o to Complex so that we can compare data members 
-        LIRS_Pair c = (LIRS_Pair) o;
-         
-        if(c.candidateInfo != null)
-           // Compare the relevant data members and return accordingly 
-           return c.candidateInfo.equals(this.candidateInfo);
-        else
-        	return false;
-    }
-}

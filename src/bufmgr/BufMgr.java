@@ -28,14 +28,19 @@ public class BufMgr {
 	* @param​replacementPolicy Name of the replacement policy
 	*/
 	public BufMgr(int numbufs, int lookAheadSize, String replacementPolicy) {
+		int i;
+		// Create array of frames
         frames = new Frame[numbufs];
+        // Allocate the frames
+    	for (i = 0; i < frames.length; i++)
+    		frames[i]= new Frame();   
         hashTable = new HashTable(numbufs);
         lirsPolicy = new LIRS();
         this.numbufs = numbufs;
         // TODO: Maybe throw exception for replacement policies we haven't implemented
         this.replacementPolicy = replacementPolicy;
         // Add all the pages initially to the free pages list
-        for(int i = 0; i < numbufs; i++) {
+        for(i = 0; i < numbufs; i++) {
         	lirsPolicy.insertFreeListEntry(new Pair(-1, i));
         }
     }
@@ -68,7 +73,7 @@ public class BufMgr {
 			// Find a candidate for replacement
 			// TODO: line below may throw BufferPoolExceededException
 			// TODO: Only use this when replacementPolicy=LIRS
-			Pair replacementCandidate = lirsPolicy.getReplacementCandidate();
+			Pair replacementCandidate = lirsPolicy.getReplacementCandidate(pageno);
 	        Integer replacementIndex = replacementCandidate.getFrameNumber();
 	        // Flush replacement page before reusing
 	        if(frames[replacementIndex].isFrameDirty())
@@ -81,32 +86,30 @@ public class BufMgr {
 				e1.printStackTrace();
 			}
 	        // Add new entry to hash table
-	        replacementCandidate.setPageNumber(pageno);
+	        replacementCandidate.setPageId(pageno);
 	        hashTable.insertEntry(replacementCandidate);
 	        // Update mgmInfo so control flow can continue as 
 	        // if nothing happened 
 	        mgmInfo = replacementCandidate;
-		}
-		// Assume mgmInfo contains the frame location
-		// for the given page from now on
-		
-		// If the page was a replacement candidate, it no
-		// longer is
+		}		
 		Integer frameIndex = mgmInfo.getFrameNumber(); 
 		Frame frame = frames[frameIndex];
+		
+        // Update the frame's pageId
+        frame.setPageId(pageno);
+
+		// If the page was a replacement candidate, it no
+		// longer is
 		if(frame.isReplacementCandidate())
 			frame.setReplacementCandidate(false);
-		// Therefore communicate LIRS to eliminate this page from
-		// list of empty pages
-		lirsPolicy.deleteFreeListEntry(new Pair(frame.getPageId(),
-				frameIndex));
 		
 		// Increment pinCount
 		frames[frameIndex].IncPinCount();
 		
 		// Update LIRS stats
-		lirsPolicy.updateEntryAccess(mgmInfo);
+		lirsPolicy.updatePageAccessStats(mgmInfo);
 		
+		// Return page stored in this frame
 		page.setPage(frames[frameIndex].getPage());		
     }
 	/**
@@ -262,91 +265,4 @@ public class BufMgr {
 	public int getNumUnpinned() {
 		return lirsPolicy.getFreeListSize();
 	}
-}
-
-class Frame 
-{
-   private PageId pid;
-   private Page pg;
-   private Integer pinCount;
-   private Boolean isDirty;
-   private Boolean isReplacementCandidate;
-    
-   public Frame() {
-      pid = new PageId();
-      pg = new Page();
-      resetFrame();
-   }
-
-   public void setPageId(PageId pid) {
-      this.pid = pid;
-   }
-   
-   public Page getPage() {
-	      return pg;
-   }
-   
-   public void IncPinCount() {
-     pinCount++;
-   }
-   
-   // TODO: Maybe throw an exception when pin_count is negative? 
-   public void DecrPinCount() {
-     pinCount--;
-     if(pinCount == 0) {
-    	 isReplacementCandidate = true;
-    	 // Flush the page
-		try {
-			Minibase.DiskManager.write_page(pid, pg);
-		} catch (InvalidPageNumberException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (FileIOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}						
-    	 
-     }
-   }
-   
-   public void setReplacementCandidate(Boolean value) {
-	   isReplacementCandidate = value;
-   }
-   
-   public Boolean isFrameDirty() {
-	   return isDirty;
-   }
-   
-   public void setFrameDirty() {
-	   isDirty = true;
-   }
-   
-   public Boolean isReplacementCandidate() {
-	   return isReplacementCandidate;
-   }
-   
-   public Integer getPinCount() {
-	   return pinCount;
-   }
-   
-   public PageId getPageId() {
-	   return pid;
-   }
-   
-   public byte[] getFrameData() {
-	   return pg.getpage();
-   }
-   
-   public void resetFrame() {
-	   pinCount = 0;
-	   isDirty = false;
-	   isReplacementCandidate = false;
-   }
-   
-   private void flushPage() {
-	   
-   }
 }
