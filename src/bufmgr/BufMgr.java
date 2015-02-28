@@ -1,5 +1,8 @@
 package bufmgr;
 
+import java.io.IOException;
+
+import chainexception.ChainException;
 import global.Page;
 import global.PageId;
 
@@ -11,7 +14,7 @@ public class BufMgr {
     private int numbufs;
     private String replacementPolicyString;
     private HashTable hashTable;
-    private LIRS replacementPolicy;
+    private LIRS replacementLIRS;
 	
 	/**
 	* Create the BufMgr object.
@@ -25,9 +28,13 @@ public class BufMgr {
 	public BufMgr(int numbufs, int lookAheadSize, String replacementPolicy) {
         frames = new Frame[numbufs];
         hashTable = new HashTable(numbufs);
-        this.replacementPolicy = new LIRS();
+        replacementLIRS = new LIRS();
         this.numbufs = numbufs;
         this.replacementPolicyString = replacementPolicy;
+        // Add all the pages initially to the free pages list
+        for(int i = 0; i < numbufs; i++) {
+        	replacementLIRS.insertFreeListEntry(new Pair(-1, i));
+        }
     }
 	/**
 	* Pin a page.
@@ -57,13 +64,18 @@ public class BufMgr {
 			//e.printStackTrace();
 			// Find a candidate for replacement
 			// TODO: line below may throw BufferPoolExceededException
-			Pair replacementCandidate = replacementPolicy.getReplacementCandidate();
+			Pair replacementCandidate = replacementLIRS.getReplacementCandidate();
 	        Integer replacementIndex = replacementCandidate.getFrameNumber();
 	        // Flush replacement page before reusing
 	        if(frames[replacementIndex].isFrameDirty())
 	           flushPage(frames[replacementIndex].getPageId());
 	        // Erase old entry from hashTable 
-	        hashTable.deleteEntry(replacementCandidate); // TODO: Handle possible exception thrown here
+	        try {
+				hashTable.deleteEntry(replacementCandidate);
+			} catch (HashEntryNotFoundException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
 	        // Add new entry to hashtable
 	        replacementCandidate.setPageNumber(pageno);
 	        hashTable.insertEntry(replacementCandidate);
@@ -77,14 +89,21 @@ public class BufMgr {
 		// If the page was a replacement candidate, it no
 		// longer is
 		Integer frameIndex = mgmInfo.getFrameNumber(); 
-		if(frames[frameIndex].isReplacementCandidate())
-			frames[frameIndex].setReplacementCandidate(false);
-
+		Frame frame = frames[frameIndex];
+		if(frame.isReplacementCandidate())
+			frame.setReplacementCandidate(false);
+		// Therefore communicate LIRS to eliminate this page from
+		// list of empty pages
+		replacementLIRS.deleteFreeListEntry(new Pair(frame.getPageId(),
+				frameIndex));
+		
 		// Increment pinCount
 		frames[frameIndex].IncPinCount();
 		
-		// TODO: is it setpage or setPage?
-		page.setpage(frames[frameIndex].getFrameData());		
+		// Update LIRS stats
+		replacementLIRS.updateEntryAccess(mgmInfo);
+		
+		page.setPage(frames[frameIndex].getPage());		
     }
 	/**
 	* Unpin a page specified by a pageId.
@@ -136,11 +155,18 @@ public class BufMgr {
 	*/
 	public PageId newPage(Page firstpage, int howmany) 
     {
-//        PageId pid = new PageId();
-//        Minibase.DiskManager.allocate_page(pid, howmany);
-//        pinPage(pid, firstpage);
-//		return pid;
-return null;
+        PageId pid = new PageId();
+        try {
+			Minibase.DiskManager.allocate_page(pid, howmany);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ChainException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        pinPage(pid, firstpage, false);
+		return pid;
     }
 	/**
 	* This method should be called to delete a page that is on disk.
@@ -166,12 +192,14 @@ return null;
 	* Returns the total number of buffer frames.
 	*/
 	public int getNumBuffers() {
-		return 0;}
+		return numbufs;
+	}
 	/**
 	* Returns the total number of unpinned buffer frames.
 	*/
 	public int getNumUnpinned() {
-		return 0;}
+		return replacementLIRS.getFreeListSize();
+	}
 
 //    /* need to replace the following with a Priority Queue: */
 //    Frame getLIRSFrame()
@@ -215,6 +243,10 @@ class Frame
 
    public void setPageId(PageId pid) {
       this.pid = pid;
+   }
+   
+   public Page getPage() {
+	      return pg;
    }
    
    public void IncPinCount() {

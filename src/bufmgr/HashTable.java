@@ -97,6 +97,11 @@ class Pair {
         this.frameNumber = frameNumber;
     }
     
+    public Pair(Integer pageNumber, Integer frameNumber) {
+        this.pageNumber = new PageId(pageNumber);
+        this.frameNumber = frameNumber;
+    }
+    
     public Pair() {
     	// Create an empty Pair by default
     	pageNumber.pid = -1;

@@ -29,6 +29,8 @@ public class LIRS {
 		}
 		else { // Now look for a candidate using LIRS
 		   computeStats();
+		   returnCandidate = victim.getCandidateInfo();
+		   victim.reset(); // reset statistics for this victim
 		}
 		return returnCandidate;
 	}
@@ -61,6 +63,10 @@ public class LIRS {
         }
 	}
 	
+	public Integer getFreeListSize() {
+		return freeList.size();
+	}
+	
 	/* Compute LIRS statistics for all candidates currently
 	 * in the list
 	 */
@@ -79,7 +85,7 @@ public class LIRS {
     	}
 	}
 	
-	public void incGlobalCount() {
+	private void incGlobalCount() {
 		globalCount++; // TODO: Add wrapping around when spilled	
 	}
 }
@@ -94,9 +100,15 @@ class LIRS_Pair {
                             // this page was accessed.
     
     public LIRS_Pair() {
+    	reset();
+    }
+    
+    public void reset() {
     	candidateInfo = null;
     	reuseDistance = Integer.MAX_VALUE;
     	recency = Integer.MAX_VALUE;
+    	weight = 0;
+    	lastAccessed = 0;    	
     }
     
     public Pair getCandidateInfo() {
