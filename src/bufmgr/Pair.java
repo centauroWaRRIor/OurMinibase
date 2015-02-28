@@ -7,7 +7,7 @@ class Pair {
     private Integer frameNumber;
 
     public Pair(PageId pageNumber, Integer frameNumber) {
-        this.pageNumber = pageNumber;
+        this.pageNumber.copyPageId(pageNumber);
         this.frameNumber = frameNumber;
     }
     
@@ -57,17 +57,17 @@ class Pair {
             return true;
         }
  
-        /* Check if o is an instance of LIRS_Pair or not
+        /* Check if o is an instance of Pair or not
           "null instanceof [type]" also returns false */
         if (!(o instanceof Pair)) {
             return false;
         }
          
-        // typecast o to Complex so that we can compare data members 
+        // typecast o to Pair so that we can compare data members 
         Pair c = (Pair) o;
          
         // Compare the relevant data members and return accordingly 
-        return c.pageNumber == this.pageNumber &&
+        return c.pageNumber.pid == this.pageNumber.pid &&
         	   c.frameNumber == this.frameNumber;
     }
 }

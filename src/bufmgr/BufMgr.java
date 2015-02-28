@@ -61,9 +61,10 @@ public class BufMgr {
 	* @param pageno page number in the Minibase.
 	* @param page the pointer point to the page.
 	* @param emptyPage true (empty page); false (non­empty page)
+	 * @throws HashEntryNotFoundException 
 	*/
 	public void pinPage(PageId pageno, Page page, boolean emptyPage) 
-    {
+		throws HashEntryNotFoundException {
 		// TODO: Throw BufferPoolExceededException
 		Pair mgmInfo = null;
 		try {
@@ -73,6 +74,7 @@ public class BufMgr {
 			// Find a candidate for replacement
 			// TODO: line below may throw BufferPoolExceededException
 			// TODO: Only use this when replacementPolicy=LIRS
+			Integer numFreePagesBefore = lirsPolicy.getFreeListSize();
 			Pair replacementCandidate = lirsPolicy.getReplacementCandidate(pageno);
 	        Integer replacementIndex = replacementCandidate.getFrameNumber();
 	        // Flush replacement page before reusing
@@ -82,11 +84,17 @@ public class BufMgr {
 	        try {
 				hashTable.deleteEntry(replacementCandidate);
 			} catch (HashEntryNotFoundException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
+				/* If the page came from the free list pool then
+				 * its expected that the corresponding entry
+				 * will not be in the hash table so its safe
+				 * to ignore. Otherwise, it is a serious fault.
+				 */
+				if(!(lirsPolicy.getFreeListSize() < numFreePagesBefore))
+				throw new HashEntryNotFoundException(e1, 
+						"Attempted deleting a non existing entry in the hash table!");
 			}
-	        // Add new entry to hash table
 	        replacementCandidate.setPageId(pageno);
+	        // Add new entry to hash table
 	        hashTable.insertEntry(replacementCandidate);
 	        // Update mgmInfo so control flow can continue as 
 	        // if nothing happened 
@@ -104,13 +112,13 @@ public class BufMgr {
 			frame.setReplacementCandidate(false);
 		
 		// Increment pinCount
-		frames[frameIndex].IncPinCount();
+		frame.incPinCount();
 		
 		// Update LIRS stats
 		lirsPolicy.updatePageAccessStats(mgmInfo);
 		
 		// Return page stored in this frame
-		page.setPage(frames[frameIndex].getPage());		
+		page.setPage(frame.getPage());		
     }
 	/**
 	* Unpin a page specified by a pageId.
@@ -148,7 +156,7 @@ public class BufMgr {
         else {
         	frame.setFrameDirty();
         	// Flushes the frame's page and raises flag for frame reuse
-        	frame.DecrPinCount();
+        	frame.decrPinCount();
     		// Finally communicate LIRS to add this page to
     		// list of empty pages
     		lirsPolicy.insertFreeListEntry(new Pair(frame.getPageId(),
@@ -180,7 +188,13 @@ public class BufMgr {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-        pinPage(pid, firstpage, false);
+        try {
+			pinPage(pid, firstpage, false);
+		} catch (HashEntryNotFoundException e) {
+			// TODO Auto-generated catch block
+			//e.printStackTrace();
+			return null;
+		}
 		return pid;
     }
 	/**

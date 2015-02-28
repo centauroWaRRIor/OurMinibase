@@ -32,7 +32,6 @@ public class HashTable {
     	Bucket directoryEntry;
 		//System.out.println ("PageID to be looked up: " + pageNumber.pid);
 		//System.out.println ("Hash table returns h(" + pageNumber.pid + ")= " + h(pageNumber.pid));
-    	//System.out.println ("Size of hash table: " + HTSIZE);
 		directoryEntry = directory[h(pageNumber.pid)];
     	result = directoryEntry.search(pageNumber);
     	if(result.isPairEmpty())
@@ -42,10 +41,13 @@ public class HashTable {
     	   return result;
     }
     
-    public void insertEntry(Pair aPair) {
+    public void insertEntry(Pair aPair)
+    		throws HashEntryNotFoundException {
     	Bucket directoryEntry;
     	directoryEntry = directory[h(aPair.getPageId().pid)];
-    	directoryEntry.insert(aPair);	    
+    	if(!directoryEntry.insert(aPair))
+    		throw new HashEntryNotFoundException(null,
+    				"Entry could not be inserted into hash table");
     }
     
     public void deleteEntry(Pair aPair) 
@@ -83,10 +85,12 @@ public class HashTable {
         	return new Pair(); // Returns empty pair
         }
         
-        public void insert(Pair newPair) {
+        public Boolean insert(Pair newPair) {
+        	Boolean status = false;
         	// Don't allow duplicates
         	if(!linkedList.contains(newPair))
-        	   linkedList.add(newPair);
+        	   status = linkedList.add(newPair);
+        	return status;
         }
         
         public Boolean delete(Pair newPair) {

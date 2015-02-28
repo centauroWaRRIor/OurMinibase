@@ -24,7 +24,7 @@ class Frame
    }
 
    public void setPageId(PageId pid) {
-      pid.copyPageId(pid);
+      this.pid.copyPageId(pid);
    }
    
    public Page getPage() {
@@ -32,12 +32,12 @@ class Frame
 	   return pg;
    }
    
-   public void IncPinCount() {
+   public void incPinCount() {
      pinCount++;
    }
    
    // TODO: Maybe throw an exception when pin_count is negative? 
-   public void DecrPinCount() {
+   public void decrPinCount() {
      pinCount--;
      if(pinCount == 0) {
     	 isReplacementCandidate = true;
