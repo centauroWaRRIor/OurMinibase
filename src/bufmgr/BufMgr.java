@@ -84,17 +84,10 @@ public class BufMgr {
 	           flushPage(frames[replacementIndex].getPageId());
 	           frames[replacementIndex].setIsFrameDirty(false);
 	        }
-			/* If the page came from the free list pool then
-			 * its expected that the corresponding entry
-			 * will not be in the hash table.
+			/* Need to remove this entry from the hash table.
+			 * Exception only applies when the this is the 
+			 * first time using this frame
 			 */
-//	        Boolean isFromFreeList = false;
-//			if(lirsPolicy.getFreeListSize() < numFreePagesBefore) {
-//				isFromFreeList = true;
-//				// Unflag this frame from, no longer a candidate
-//				frames[replacementIndex].setReplacementCandidate(false);
-//			}
-//			else { // Erase old entry from hashTable 
 	        if(frames[replacementIndex].isHashed()) {
 	           try {
 				   hashTable.deleteEntry(replacementCandidate);
@@ -103,8 +96,7 @@ public class BufMgr {
 					   "Attempted to delete a non existing entry in the hash table!");
 			   }
 	        }
-//			}
-			// Set this frame for use with page id = pageno
+			// Set this frame for use with new page id
 			replacementCandidate.setPageId(pageno.pid);
 	        // Add new entry to hash table
 	        hashTable.insertEntry(replacementCandidate);

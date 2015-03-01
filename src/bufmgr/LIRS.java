@@ -23,20 +23,26 @@ public class LIRS {
        }
 	}
 	
-	/* We need to return a Pair object so that we can
-	 * plug that object into HashTable.delete() in turn
+	/* Returns a Pair type so that it can be easily 
+	 * plugged into the hash table delete method 
 	 */
 	public Pair getReplacementCandidate(PageId targetPage)
 			throws LIRSFailureException {
 		Pair returnCandidate = null;
 		Boolean status = false;
+		Integer oldpid;
 		// Look under free list first
 		if(!freeList.isEmpty()) {
 			returnCandidate = freeList.removeFirst();
+			oldpid = returnCandidate.getPageId().pid;
+			// Track this candidate using LIRS and the new target pid
 			returnCandidate.setPageId(targetPage.pid);
 			LIRS_Pair tmpLIRSEntry = new LIRS_Pair(returnCandidate);
 			// Start tracking this page with the LIRS algorithm
 			status = candidateList.add(tmpLIRSEntry);
+			// Return the old pid so that the pair entry can be
+			// removed from the hash table
+			returnCandidate.setPageId(oldpid);
 		}
 		else { // Now look for a candidate using LIRS
 		   computeStats(); // Updates Stats for all candidates being tracked by LIRS
