@@ -84,6 +84,17 @@ public class BufMgr {
 	           flushPage(frames[replacementIndex].getPageId());
 	           frames[replacementIndex].setIsFrameDirty(false);
 	        }
+	        
+	        // Bring in page from disk into this frame
+			try {
+		       Minibase.DiskManager.read_page(pageno, 
+		    		                frames[replacementIndex].getPage());
+			} catch (Exception dskMgre) {
+				// Per the specs, throw exception caused by lower layer
+				throw new DiskMgrException(dskMgre, "DiskManager failed to read page " 
+				                                    + pageno.pid);
+			}
+	        
 			/* Need to remove this entry from the hash table.
 			 * Exception only applies when the this is the 
 			 * first time using this frame

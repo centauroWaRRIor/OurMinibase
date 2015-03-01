@@ -72,10 +72,6 @@ class Frame
 	   return pageId;
    }
    
-   public byte[] getFrameData() {
-	   return pg.getpage();
-   }
-   
    public void resetFrame() {
 	   pinCount = 0;
 	   isDirty = false;
