@@ -112,11 +112,11 @@ class BMDriver extends TestDriver implements GlobalConst {
 
 		//Running test1() to test6()
 		if (!test1()) { _passAll = FAIL; }    
-		if (!test2()) { _passAll = FAIL; }
-		if (!test3()) { _passAll = FAIL; }
-		if (!test4()) { _passAll = FAIL; }
-		if (!test5()) { _passAll = FAIL; }
-		if (!test6()) { _passAll = FAIL; }
+		//if (!test2()) { _passAll = FAIL; }
+		//if (!test3()) { _passAll = FAIL; }
+		//if (!test4()) { _passAll = FAIL; }
+		//if (!test5()) { _passAll = FAIL; }
+		//if (!test6()) { _passAll = FAIL; }
 
 		return _passAll;
 	}
@@ -343,103 +343,103 @@ class BMDriver extends TestDriver implements GlobalConst {
 			"    but it should have none.\n");
 		}
 
-//		// Now pin that last page, and make sure it fails.
-//		if ( status == OK ) {
-//			try {
-//				Minibase.BufferManager.pinPage( lastPid, pg, /*emptyPage:*/ false );
-//			}
-//			catch (ChainException e) { 
-//				status = checkException (e, "bufmgr.BufferPoolExceededException");
-//				if (status == FAIL) {
-//					System.err.print("*** Pinning too many pages\n");
-//					System.out.println ("  --> Failed as expected \n");
-//				}
-//			}
-//			catch (Exception e) {e.printStackTrace();}
-//
-//			if (status == OK) {
-//				status = FAIL;
-//				System.err.print ("The expected exception was not thrown\n");
-//			}
-//			else {
-//				status = OK;
-//			}
-//		}
-//
-//		if ( status == OK ) {
-//			try {
-//				Minibase.BufferManager.pinPage( firstPid, pg, /*emptyPage:*/ false );
-//			}
-//			catch (Exception e) {
-//				status = FAIL;
-//				System.err.print("*** Could not acquire a second pin on a page\n");
-//				e.printStackTrace();
-//			}
-//
-//			if ( status == OK ) {
-//				System.out.print ("  - Try to free a doubly-pinned page\n");
-//				try {
-//					Minibase.BufferManager.freePage( firstPid );
-//				}
-//
-//				catch (ChainException e) {
-//					status = checkException (e, "bufmgr.PagePinnedException");
-//
-//					if (status == FAIL) {
-//						System.err.print("*** Freeing a pinned page\n");
-//						System.out.println ("  --> Failed as expected \n");
-//					}
-//				}
-//
-//				catch (Exception e) {
-//					e.printStackTrace();
-//				}
-//
-//				if (status == OK) {
-//					status = FAIL;
-//					System.err.print ("The expected exception was not thrown\n");
-//				}
-//				else {
-//					status = OK;
-//				}
-//			}
-//
-//			if (status == OK) {
-//				try {
-//					Minibase.BufferManager.unpinPage( firstPid, false );
-//				}
-//				catch (Exception e) {
-//					status = FAIL;
-//					e.printStackTrace();
-//				}
-//			}
-//		}
-//
-//		if ( status == OK ) {
-//			System.out.print ("  - Try to unpin a page not in the buffer pool\n");
-//			try {
-//				Minibase.BufferManager.unpinPage( lastPid, false );
-//			}
-//			catch (ChainException e) { 
-//				status = checkException (e, "bufmgr.HashEntryNotFoundException");
-//
-//				if (status == FAIL) {
-//					System.err.print("*** Unpinning a page not in the buffer pool\n"); 
-//					System.out.println ("  --> Failed as expected \n");
-//				}
-//			}
-//			catch (Exception e) {
-//				e.printStackTrace();
-//			}
-//
-//			if (status == OK) {
-//				status = FAIL;
-//				System.err.print ("The expected exception was not thrown\n");
-//			}
-//			else {
-//				status = OK;
-//			}
-//		}
+		// Now pin that last page, and make sure it fails.
+		if ( status == OK ) {
+			try {
+				Minibase.BufferManager.pinPage( lastPid, pg, /*emptyPage:*/ false );
+			}
+			catch (ChainException e) { 
+				status = checkException (e, "bufmgr.BufferPoolExceededException");
+				if (status == FAIL) {
+					System.err.print("*** Pinning too many pages\n");
+					System.out.println ("  --> Failed as expected \n");
+				}
+			}
+			catch (Exception e) {e.printStackTrace();}
+
+			if (status == OK) {
+				status = FAIL;
+				System.err.print ("The expected exception was not thrown\n");
+			}
+			else {
+				status = OK;
+			}
+		}
+
+		if ( status == OK ) {
+			try {
+				Minibase.BufferManager.pinPage( firstPid, pg, /*emptyPage:*/ false );
+			}
+			catch (Exception e) {
+				status = FAIL;
+				System.err.print("*** Could not acquire a second pin on a page\n");
+				e.printStackTrace();
+			}
+
+			if ( status == OK ) {
+				System.out.print ("  - Try to free a doubly-pinned page\n");
+				try {
+					Minibase.BufferManager.freePage( firstPid );
+				}
+
+				catch (ChainException e) {
+					status = checkException (e, "bufmgr.PagePinnedException");
+
+					if (status == FAIL) {
+						System.err.print("*** Freeing a pinned page\n");
+						System.out.println ("  --> Failed as expected \n");
+					}
+				}
+
+				catch (Exception e) {
+					e.printStackTrace();
+				}
+
+				if (status == OK) {
+					status = FAIL;
+					System.err.print ("The expected exception was not thrown\n");
+				}
+				else {
+					status = OK;
+				}
+			}
+
+			if (status == OK) {
+				try {
+					Minibase.BufferManager.unpinPage( firstPid, false );
+				}
+				catch (Exception e) {
+					status = FAIL;
+					e.printStackTrace();
+				}
+			}
+		}
+
+		if ( status == OK ) {
+			System.out.print ("  - Try to unpin a page not in the buffer pool\n");
+			try {
+				Minibase.BufferManager.unpinPage( lastPid, false );
+			}
+			catch (ChainException e) { 
+				status = checkException (e, "bufmgr.HashEntryNotFoundException");
+
+				if (status == FAIL) {
+					System.err.print("*** Unpinning a page not in the buffer pool\n"); 
+					System.out.println ("  --> Failed as expected \n");
+				}
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+			}
+
+			if (status == OK) {
+				status = FAIL;
+				System.err.print ("The expected exception was not thrown\n");
+			}
+			else {
+				status = OK;
+			}
+		}
 
 		for ( pid.pid = firstPid.pid; pid.pid < lastPid.pid; 
 		pid.pid = pid.pid + 1 ) {
