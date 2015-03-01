@@ -36,7 +36,7 @@ public class HashTable {
     	result = directoryEntry.search(pageNumber);
     	if(result.isPairEmpty())
     		throw new HashEntryNotFoundException(null,
-    				"PageID is not found in the buffer pool");
+    				"PageID " + pageNumber.pid + " is not found in the buffer pool");
     	else 
     	   return result;
     }
@@ -47,7 +47,7 @@ public class HashTable {
     	directoryEntry = directory[h(aPair.getPageId().pid)];
     	if(!directoryEntry.insert(aPair))
     		throw new HashEntryNotFoundException(null,
-    				"Entry could not be inserted into hash table");
+    				"PageID " + aPair.getPageId() + " could not be inserted into hash table");
     }
     
     public void deleteEntry(Pair aPair) 
@@ -56,7 +56,7 @@ public class HashTable {
     	directoryEntry = directory[h(aPair.getPageId().pid)];
     	if(!directoryEntry.delete(aPair))
     		throw new HashEntryNotFoundException(null,
-    				"PageID is not found in the buffer pool");
+    				"PageID " + aPair.getPageId() + " could not be removed from hash table");
     }
     
     // hash function is internal to the class

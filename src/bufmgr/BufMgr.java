@@ -68,14 +68,14 @@ public class BufMgr {
 		throws HashEntryNotFoundException, LIRSFailureException, DiskMgrException {
 		// TODO: Throw BufferPoolExceededException
 		Pair mgmInfo = null;
+		Boolean hashEntryFound = true;
 		try {
 			mgmInfo = hashTable.hashKey(pageno);
 		} catch (HashEntryNotFoundException e) {
-			//e.printStackTrace();
+			hashEntryFound = false;
 			// Find a candidate for replacement
 			// TODO: line below may throw BufferPoolExceededException
 			// TODO: Only use this when replacementPolicy=LIRS
-			Integer numFreePagesBefore = lirsPolicy.getFreeListSize();
 			Pair replacementCandidate = lirsPolicy.getReplacementCandidate(pageno);
 	        Integer replacementIndex = replacementCandidate.getFrameNumber();
 	        
@@ -88,30 +88,48 @@ public class BufMgr {
 			 * its expected that the corresponding entry
 			 * will not be in the hash table.
 			 */
-			if(lirsPolicy.getFreeListSize() < numFreePagesBefore) {
-				// Unflag this frame from, no longer a candidate
-				frames[replacementIndex].setReplacementCandidate(false);
-			}
-			else { // Erase old entry from hashTable 
+//	        Boolean isFromFreeList = false;
+//			if(lirsPolicy.getFreeListSize() < numFreePagesBefore) {
+//				isFromFreeList = true;
+//				// Unflag this frame from, no longer a candidate
+//				frames[replacementIndex].setReplacementCandidate(false);
+//			}
+//			else { // Erase old entry from hashTable 
+	        if(frames[replacementIndex].isHashed()) {
 	           try {
 				   hashTable.deleteEntry(replacementCandidate);
 			   } catch (HashEntryNotFoundException e1) {
 			      throw new HashEntryNotFoundException(e1, 
 					   "Attempted to delete a non existing entry in the hash table!");
 			   }
-			}
+	        }
+//			}
 			// Set this frame for use with page id = pageno
 			replacementCandidate.setPageId(pageno.pid);
 	        // Add new entry to hash table
 	        hashTable.insertEntry(replacementCandidate);
+	        // Lower initial condition flag for this frame (always true after first time)
+	        frames[replacementIndex].setIsHashed(true);
 	        // Update mgmInfo so control flow can continue as 
 	        // if nothing happened 
 	        mgmInfo = replacementCandidate;
 		}		
 		Integer frameIndex = mgmInfo.getFrameNumber(); 
 		Frame frame = frames[frameIndex];
-				
-		// Increment pinCount
+		// Update pageid for this frame here
+		frame.setPageId(pageno.pid);
+
+		/* Delete from free list only in special case where 
+		 * this frame was a replacement candidate but was
+		 * still in the hash table
+		 */
+		if(hashEntryFound && frame.isReplacementCandidate()) {
+			lirsPolicy.deleteFreeListEntry(mgmInfo); 
+		}
+			
+		/* Increment pinCount, this will also remove the 
+		 * replacement candidate flag if there was such.
+		 */
 		frame.incPinCount();
 		
 		// Update LIRS stats

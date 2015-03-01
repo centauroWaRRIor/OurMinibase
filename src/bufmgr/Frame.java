@@ -1,13 +1,7 @@
 package bufmgr;
 
-import global.Minibase;
 import global.Page;
 import global.PageId;
-
-import java.io.IOException;
-
-import diskmgr.FileIOException;
-import diskmgr.InvalidPageNumberException;
 
 class Frame 
 {
@@ -16,6 +10,7 @@ class Frame
    private Integer pinCount;
    private Boolean isDirty;
    private Boolean isReplacementCandidate;
+   private Boolean isInHashTable; // Deals with init condition
     
    public Frame() {
       pageId = new PageId();
@@ -33,6 +28,8 @@ class Frame
    }
    
    public void incPinCount() { // TODO: Deal with variable wrapping around
+	 if(pinCount == 0)
+	   	 isReplacementCandidate = false;	   
      pinCount++;
    }
    
@@ -59,6 +56,14 @@ class Frame
 	   return isReplacementCandidate;
    }
    
+   public Boolean isHashed() {
+	   return isInHashTable;
+   }
+   
+   public void setIsHashed(Boolean value) {
+	   isInHashTable = value;
+   }
+   
    public Integer getPinCount() {
 	   return pinCount;
    }
@@ -75,5 +80,6 @@ class Frame
 	   pinCount = 0;
 	   isDirty = false;
 	   isReplacementCandidate = true;
+	   isInHashTable = false;
    }
 }

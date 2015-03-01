@@ -58,15 +58,16 @@ public class LIRS {
 			throw new LIRSFailureException(null, "LIRS Failed to delete from free list");
 	}
 	
-	public void insertFreeListEntry (Pair entry) 
-			throws LIRSFailureException {
+	public void insertFreeListEntry (Pair entry) {
+			//throws LIRSFailureException {
 		// Remove from list of candidates being tracked by LIRS
 		LIRS_Pair tempEntry = new LIRS_Pair(entry);
-	    candidateList.remove(tempEntry); // May or may being tracked by LIRS
+	    candidateList.remove(tempEntry); // May or may not being tracked by LIRS
 	    // Now add to list of free pages
-	    Boolean status = freeList.add(entry);
-		if(!status)
-			throw new LIRSFailureException(null, "LIRS Failed to insert into free list");
+//	    Boolean status = freeList.add(entry);
+//		if(!status)
+//			throw new LIRSFailureException(null, "LIRS Failed to insert into free list");
+	    freeList.addLast(entry);
 	}
 	
 	public void updatePageAccessStats(Pair entry) 
