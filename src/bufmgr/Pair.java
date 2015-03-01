@@ -5,11 +5,6 @@ import global.PageId;
 class Pair {
     private PageId pageNumber;
     private Integer frameNumber;
-
-    public Pair(PageId pageNumber, Integer frameNumber) {
-        this.pageNumber.copyPageId(pageNumber);
-        this.frameNumber = frameNumber;
-    }
     
     public Pair(Integer pageNumber, Integer frameNumber) {
         this.pageNumber = new PageId(pageNumber);
@@ -28,8 +23,8 @@ class Pair {
     	frameNumber = o.frameNumber;
     }
     
-    public void setPageId(PageId pageNumber) {
-        this.pageNumber.copyPageId(pageNumber);
+    public void setPageId(Integer pid) {
+        this.pageNumber.pid = pid;
     }
 
     public void setFrameNumber(Integer frameNumber) {

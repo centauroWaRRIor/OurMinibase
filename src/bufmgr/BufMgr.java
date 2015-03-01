@@ -93,7 +93,7 @@ public class BufMgr {
 				throw new HashEntryNotFoundException(e1, 
 						"Attempted deleting a non existing entry in the hash table!");
 			}
-	        replacementCandidate.setPageId(pageno);
+	        replacementCandidate.setPageId(pageno.pid);
 	        // Add new entry to hash table
 	        hashTable.insertEntry(replacementCandidate);
 	        // Update mgmInfo so control flow can continue as 
@@ -104,7 +104,7 @@ public class BufMgr {
 		Frame frame = frames[frameIndex];
 		
         // Update the frame's pageId
-        frame.setPageId(pageno);
+        frame.setPageId(pageno.pid);
 
 		// If the page was a replacement candidate, it no
 		// longer is
@@ -157,10 +157,11 @@ public class BufMgr {
         	frame.setFrameDirty();
         	// Flushes the frame's page and raises flag for frame reuse
         	frame.decrPinCount();
-    		// Finally communicate LIRS to add this page to
-    		// list of empty pages
-    		lirsPolicy.insertFreeListEntry(new Pair(frame.getPageId(),
-    				frameIndex));
+    		// Finally, communicate to LIRS to add this page to
+    		// list of empty pages if appropriate
+        	if(frame.isReplacementCandidate())
+    		   lirsPolicy.insertFreeListEntry(new Pair(frame.getPageId().pid,
+    				                                   frameIndex));
         }
     }
 	/**

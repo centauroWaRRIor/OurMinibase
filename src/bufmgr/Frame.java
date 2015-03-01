@@ -11,20 +11,20 @@ import diskmgr.InvalidPageNumberException;
 
 class Frame 
 {
-   private PageId pid;
+   private PageId pageId;
    private Page pg;
    private Integer pinCount;
    private Boolean isDirty;
    private Boolean isReplacementCandidate;
     
    public Frame() {
-      pid = new PageId();
+      pageId = new PageId();
       pg = new Page();
       resetFrame();
    }
 
-   public void setPageId(PageId pid) {
-      this.pid.copyPageId(pid);
+   public void setPageId(Integer pid) {
+      this.pageId.pid = pid;
    }
    
    public Page getPage() {
@@ -43,7 +43,7 @@ class Frame
     	 isReplacementCandidate = true;
     	 // Flush the page
 		try {
-			Minibase.DiskManager.write_page(pid, pg);
+			Minibase.DiskManager.write_page(pageId, pg);
 		} catch (InvalidPageNumberException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -79,7 +79,7 @@ class Frame
    }
    
    public PageId getPageId() {
-	   return pid;
+	   return pageId;
    }
    
    public byte[] getFrameData() {

@@ -27,7 +27,7 @@ public class LIRS {
 		// Look under free list first
 		if(!freeList.isEmpty()) {
 			returnCandidate = freeList.removeFirst();
-			returnCandidate.setPageId(targetPage);
+			returnCandidate.setPageId(targetPage.pid);
 			LIRS_Pair tmpLIRSEntry = new LIRS_Pair(returnCandidate);
 			// Start tracking this page with the LIRS algorithm
 			candidateList.add(tmpLIRSEntry);
@@ -147,12 +147,6 @@ public class LIRS {
 	        /* Check if o is an instance of LIRS_Pair or not
 	          "null instanceof [type]" also returns false */
 	        if (!(o instanceof LIRS_Pair)) {
-//	        	if(o instanceof Pair) {
-//	        		// typecast o to Complex so that we can compare data members 
-//	    	        Pair c = (Pair) o;
-//	    	        return c.equals(this.candidateInfo);
-//	        	}
-//	        	else
 	               return false;
 	        }
 	         
@@ -161,12 +155,7 @@ public class LIRS {
 	         
 	        if(c.candidateInfo != null)
 	           // Compare the relevant data members and return accordingly 
-	           return c.candidateInfo.equals(this.candidateInfo);
-//	        		   &&
-//	        		  c.reuseDistance == this.reuseDistance && 
-//	   	              c.recency == this.recency &&
-//	   	              c.weight == this.weight &&
-//	   	              c.lastAccessed == this.lastAccessed; // Value of globalCount last time 
+	           return c.candidateInfo.equals(this.candidateInfo); 
 	        else
 	        	return false;
 	    }
