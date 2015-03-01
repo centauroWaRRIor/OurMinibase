@@ -32,30 +32,15 @@ class Frame
 	   return pg;
    }
    
-   public void incPinCount() {
+   public void incPinCount() { // TODO: Deal with variable wrapping around
      pinCount++;
    }
    
    // TODO: Maybe throw an exception when pin_count is negative? 
    public void decrPinCount() {
      pinCount--;
-     if(pinCount == 0) {
+     if(pinCount == 0)
     	 isReplacementCandidate = true;
-    	 // Flush the page
-		try {
-			Minibase.DiskManager.write_page(pageId, pg);
-		} catch (InvalidPageNumberException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (FileIOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}						
-    	 
-     }
    }
    
    public void setReplacementCandidate(Boolean value) {
@@ -66,8 +51,8 @@ class Frame
 	   return isDirty;
    }
    
-   public void setFrameDirty() {
-	   isDirty = true;
+   public void setIsFrameDirty(Boolean isDirty) {
+	   this.isDirty = isDirty;
    }
    
    public Boolean isReplacementCandidate() {
@@ -89,6 +74,6 @@ class Frame
    public void resetFrame() {
 	   pinCount = 0;
 	   isDirty = false;
-	   isReplacementCandidate = false;
+	   isReplacementCandidate = true;
    }
 }

@@ -49,7 +49,7 @@ public class LIRS {
 	}
 	
 	public void deleteFreeListEntry (Pair entry) 
-			throws LIRSFailureException { // TODO make it throw exception
+			throws LIRSFailureException {
 		Boolean status = freeList.remove(entry);
 		LIRS_Pair tmpLIRSEntry = new LIRS_Pair(entry);
 		// Start tracking this page with the LIRS algorithm
@@ -62,9 +62,9 @@ public class LIRS {
 			throws LIRSFailureException {
 		// Remove from list of candidates being tracked by LIRS
 		LIRS_Pair tempEntry = new LIRS_Pair(entry);
-	    Boolean status = candidateList.remove(tempEntry);
+	    candidateList.remove(tempEntry); // May or may being tracked by LIRS
 	    // Now add to list of free pages
-		status &= freeList.add(entry);
+	    Boolean status = freeList.add(entry);
 		if(!status)
 			throw new LIRSFailureException(null, "LIRS Failed to insert into free list");
 	}

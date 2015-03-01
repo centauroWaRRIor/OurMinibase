@@ -78,23 +78,30 @@ public class BufMgr {
 			Integer numFreePagesBefore = lirsPolicy.getFreeListSize();
 			Pair replacementCandidate = lirsPolicy.getReplacementCandidate(pageno);
 	        Integer replacementIndex = replacementCandidate.getFrameNumber();
+	        
 	        // Flush replacement page before reusing
-	        if(frames[replacementIndex].isFrameDirty())
+	        if(frames[replacementIndex].isFrameDirty()) {
 	           flushPage(frames[replacementIndex].getPageId());
-	        // Erase old entry from hashTable 
-	        try {
-				hashTable.deleteEntry(replacementCandidate);
-			} catch (HashEntryNotFoundException e1) {
-				/* If the page came from the free list pool then
-				 * its expected that the corresponding entry
-				 * will not be in the hash table so its safe
-				 * to ignore. Otherwise, it is a serious fault.
-				 */
-				if(!(lirsPolicy.getFreeListSize() < numFreePagesBefore))
-				throw new HashEntryNotFoundException(e1, 
-						"Attempted to delete a non existing entry in the hash table!");
+	           frames[replacementIndex].setIsFrameDirty(false);
+	        }
+			/* If the page came from the free list pool then
+			 * its expected that the corresponding entry
+			 * will not be in the hash table.
+			 */
+			if(lirsPolicy.getFreeListSize() < numFreePagesBefore) {
+				// Unflag this frame from, no longer a candidate
+				frames[replacementIndex].setReplacementCandidate(false);
 			}
-	        replacementCandidate.setPageId(pageno.pid);
+			else { // Erase old entry from hashTable 
+	           try {
+				   hashTable.deleteEntry(replacementCandidate);
+			   } catch (HashEntryNotFoundException e1) {
+			      throw new HashEntryNotFoundException(e1, 
+					   "Attempted to delete a non existing entry in the hash table!");
+			   }
+			}
+			// Set this frame for use with page id = pageno
+			replacementCandidate.setPageId(pageno.pid);
 	        // Add new entry to hash table
 	        hashTable.insertEntry(replacementCandidate);
 	        // Update mgmInfo so control flow can continue as 
@@ -103,18 +110,7 @@ public class BufMgr {
 		}		
 		Integer frameIndex = mgmInfo.getFrameNumber(); 
 		Frame frame = frames[frameIndex];
-		
-        // Update the frame's pageId
-        frame.setPageId(pageno.pid);
-
-		// If the page was a replacement candidate, it no
-		// longer is
-		if(frame.isReplacementCandidate()) {
-			frame.setReplacementCandidate(false);
-			// Communicate to LIRS to remove it from the free list
-			lirsPolicy.deleteFreeListEntry(mgmInfo);
-		}
-		
+				
 		// Increment pinCount
 		frame.incPinCount();
 		
@@ -159,8 +155,10 @@ public class BufMgr {
         	throw new PageUnpinnedException(null,
     				"Trying to unpin a page not found in the buffer pool");
         else {
-        	frame.setFrameDirty();
-        	// Flushes the frame's page and raises flag for frame reuse
+        	if(dirty)
+        	   frame.setIsFrameDirty(true);
+        	// Flushes the frame's page and raises flag for frame reuse 
+        	// when pinCount = 0
         	frame.decrPinCount();
     		// Finally, communicate to LIRS to add this page to
     		// list of empty pages if appropriate
@@ -181,16 +179,23 @@ public class BufMgr {
 	* @param howmany total number of allocated new pages.
 	*
 	* @return the first page id of the new pages.__ null, if error.
+	 * @throws ChainException 
 	*/
 	public PageId newPage(Page firstpage, int howmany) 
+			throws ChainException 
     {
         PageId pid = new PageId();
         try {
 			Minibase.DiskManager.allocate_page(pid, howmany);
 			pinPage(pid, firstpage, false);
-		} catch (Exception e) {
-			// According to specs
-			return null;
+		} catch (HashEntryNotFoundException e1) {
+			throw new HashEntryNotFoundException(e1, "Issue pinning pid (Hash Table)");
+		} catch (LIRSFailureException e2) {
+			throw new LIRSFailureException(e2, "Issue pinning pid (LIRS)");
+		} catch (DiskMgrException e3) {
+			throw new DiskMgrException(e3, "Issue allocating pid (DiskManager)");
+		} catch (Exception e4) {
+			throw new ChainException(e4, "Issue allocating pid (other)");
 		}
 		return pid;
     }
