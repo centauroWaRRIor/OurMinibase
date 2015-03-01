@@ -11,45 +11,66 @@ public class LIRS {
     private Integer globalCount; // Gets incremented every time a page gets accessed
 	private LIRS_Pair victim;
 	
-	public LIRS() {
+	public LIRS(Integer sizeOfFreeList) {
 		
 	   freeList = new LinkedList<Pair>();
 	   candidateList = new LinkedList<LIRS_Pair>();
 	   globalCount = 0;
 	   victim = null;
+       // Add all the pages initially to the free pages list
+       for(int i = 0; i < sizeOfFreeList; i++) {
+    	  freeList.add(new Pair(-1, i));
+       }
 	}
 	
 	/* We need to return a Pair object so that we can
 	 * plug that object into HashTable.delete() in turn
 	 */
-	public Pair getReplacementCandidate(PageId targetPage) {
+	public Pair getReplacementCandidate(PageId targetPage)
+			throws LIRSFailureException {
 		Pair returnCandidate = null;
+		Boolean status = false;
 		// Look under free list first
 		if(!freeList.isEmpty()) {
 			returnCandidate = freeList.removeFirst();
 			returnCandidate.setPageId(targetPage.pid);
 			LIRS_Pair tmpLIRSEntry = new LIRS_Pair(returnCandidate);
 			// Start tracking this page with the LIRS algorithm
-			candidateList.add(tmpLIRSEntry);
+			status = candidateList.add(tmpLIRSEntry);
 		}
 		else { // Now look for a candidate using LIRS
 		   computeStats(); // Updates Stats for all candidates being tracked by LIRS
 		   returnCandidate = victim.getCandidateInfo();
 		   victim.reset(); // reset statistics for this victim
 		}
+		if(!status || returnCandidate == null)
+			throw new LIRSFailureException(null, "LIRS Failed to pick a replacement candidate");
 		return new Pair(returnCandidate);
 	}
 	
-	public void insertFreeListEntry (Pair entry) {
-		// Remove from list of candidates being tracked by LIRS
-		LIRS_Pair tempEntry = new LIRS_Pair(entry);
-		// TODO: Add check for failure to remove
-	    candidateList.remove(tempEntry);
-	    // Now add to list of free pages
-		freeList.add(entry);
+	public void deleteFreeListEntry (Pair entry) 
+			throws LIRSFailureException { // TODO make it throw exception
+		Boolean status = freeList.remove(entry);
+		LIRS_Pair tmpLIRSEntry = new LIRS_Pair(entry);
+		// Start tracking this page with the LIRS algorithm
+		status &= candidateList.add(tmpLIRSEntry);
+		if(!status)
+			throw new LIRSFailureException(null, "LIRS Failed to delete from free list");
 	}
 	
-	public void updatePageAccessStats(Pair entry) {
+	public void insertFreeListEntry (Pair entry) 
+			throws LIRSFailureException {
+		// Remove from list of candidates being tracked by LIRS
+		LIRS_Pair tempEntry = new LIRS_Pair(entry);
+	    Boolean status = candidateList.remove(tempEntry);
+	    // Now add to list of free pages
+		status &= freeList.add(entry);
+		if(!status)
+			throw new LIRSFailureException(null, "LIRS Failed to insert into free list");
+	}
+	
+	public void updatePageAccessStats(Pair entry) 
+			throws LIRSFailureException {
     	LIRS_Pair candidate = new LIRS_Pair(entry);
     	// Look for the given page
     	int i = candidateList.indexOf(candidate);
@@ -59,6 +80,8 @@ public class LIRS {
            candidate.updateLastAccessed(globalCount);
            incGlobalCount();
         }
+    	else 
+    		throw new LIRSFailureException(null, "LIR Policy failed to update stats");
 	}
 	
 	public Integer getFreeListSize() {

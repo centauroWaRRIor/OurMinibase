@@ -3,6 +3,7 @@ package bufmgr;
 import java.io.IOException;
 
 import chainexception.ChainException;
+import diskmgr.DiskMgrException;
 import diskmgr.FileIOException;
 import diskmgr.InvalidPageNumberException;
 import global.Page;
@@ -22,27 +23,25 @@ public class BufMgr {
 	* Create the BufMgr object.
 	* Allocate pages (frames) for the buffer pool in main memory and
 	* make the buffer manage aware that the replacement policy is* specified by replacerArg (e.g., LH, Clock, LRU, MRU, LIRS, etc.).
+	 * @throws LIRSFailureException 
 	*
 	* @param​numbufs number of buffers in the buffer pool
 	* @param​lookAheadSize number of pages to be looked ahead
 	* @param​replacementPolicy Name of the replacement policy
 	*/
-	public BufMgr(int numbufs, int lookAheadSize, String replacementPolicy) {
-		int i;
+	public BufMgr(int numbufs, int lookAheadSize, String replacementPolicy) 
+			throws LIRSFailureException {
+
 		// Create array of frames
         frames = new Frame[numbufs];
         // Allocate the frames
-    	for (i = 0; i < frames.length; i++)
+    	for (int i = 0; i < frames.length; i++)
     		frames[i]= new Frame();   
         hashTable = new HashTable(numbufs);
-        lirsPolicy = new LIRS();
+        lirsPolicy = new LIRS(numbufs);
         this.numbufs = numbufs;
         // TODO: Maybe throw exception for replacement policies we haven't implemented
         this.replacementPolicy = replacementPolicy;
-        // Add all the pages initially to the free pages list
-        for(i = 0; i < numbufs; i++) {
-        	lirsPolicy.insertFreeListEntry(new Pair(-1, i));
-        }
     }
 	/**
 	* Pin a page.
@@ -62,9 +61,11 @@ public class BufMgr {
 	* @param page the pointer point to the page.
 	* @param emptyPage true (empty page); false (non­empty page)
 	 * @throws HashEntryNotFoundException 
+	 * @throws LIRSFailureException 
+	 * @throws DiskMgrException 
 	*/
 	public void pinPage(PageId pageno, Page page, boolean emptyPage) 
-		throws HashEntryNotFoundException {
+		throws HashEntryNotFoundException, LIRSFailureException, DiskMgrException {
 		// TODO: Throw BufferPoolExceededException
 		Pair mgmInfo = null;
 		try {
@@ -91,7 +92,7 @@ public class BufMgr {
 				 */
 				if(!(lirsPolicy.getFreeListSize() < numFreePagesBefore))
 				throw new HashEntryNotFoundException(e1, 
-						"Attempted deleting a non existing entry in the hash table!");
+						"Attempted to delete a non existing entry in the hash table!");
 			}
 	        replacementCandidate.setPageId(pageno.pid);
 	        // Add new entry to hash table
@@ -108,8 +109,11 @@ public class BufMgr {
 
 		// If the page was a replacement candidate, it no
 		// longer is
-		if(frame.isReplacementCandidate())
+		if(frame.isReplacementCandidate()) {
 			frame.setReplacementCandidate(false);
+			// Communicate to LIRS to remove it from the free list
+			lirsPolicy.deleteFreeListEntry(mgmInfo);
+		}
 		
 		// Increment pinCount
 		frame.incPinCount();
@@ -135,9 +139,10 @@ public class BufMgr {
 	*
 	* @param pageno page number in the Minibase.
 	* @param dirty the dirty bit of the frame
+	 * @throws LIRSFailureException 
 	*/
 	public void unpinPage(PageId pageno, boolean dirty) 
-	throws PageUnpinnedException
+	throws PageUnpinnedException, LIRSFailureException
     {
 		Pair mgmInfo = null;
 		try {
@@ -182,18 +187,9 @@ public class BufMgr {
         PageId pid = new PageId();
         try {
 			Minibase.DiskManager.allocate_page(pid, howmany);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (ChainException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-        try {
 			pinPage(pid, firstpage, false);
-		} catch (HashEntryNotFoundException e) {
-			// TODO Auto-generated catch block
-			//e.printStackTrace();
+		} catch (Exception e) {
+			// According to specs
 			return null;
 		}
 		return pid;
@@ -204,14 +200,16 @@ public class BufMgr {
 	* deallocate the page.
 	*
 	* @param globalPageId the page number in the data base.
+	 * @throws DiskMgrException 
 	*/
-	public void freePage(PageId globalPageId)
+	public void freePage(PageId globalPageId) 
+			throws DiskMgrException
 	{
 		try {
 			Minibase.DiskManager.deallocate_page(globalPageId);
-		} catch (ChainException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} catch (Exception e) {
+			// Per the specs, throw exception caused by lower layer
+			throw new DiskMgrException(e, "DiskManager failed to deallocate page");
 		}
 	}
 	/**
@@ -219,52 +217,41 @@ public class BufMgr {
 	* This method calls the write_page method of the diskmgr package.
 	*
 	* @param pageid the page number in the database.
+	 * @throws DiskMgrException 
+	 * @throws HashEntryNotFoundException 
 	*/
-	public void flushPage(PageId pageid) {
+	public void flushPage(PageId pageid) 
+			throws DiskMgrException, HashEntryNotFoundException {
 		Pair bufferPageInfo = null;
 		try {
-			bufferPageInfo = hashTable.hashKey(pageid);
+		   bufferPageInfo = hashTable.hashKey(pageid);
+		   Integer frameIndex = bufferPageInfo.getFrameNumber(); 
+		   Frame frame = frames[frameIndex];
+		   Minibase.DiskManager.write_page(frame.getPageId(), frame.getPage());
 		} catch (HashEntryNotFoundException e) {
-			// TODO: Agree on what happens here
-			e.printStackTrace();
-            return;
+			throw new HashEntryNotFoundException(e, "Page to flush not found in buffer pool");
+		} catch (Exception e) {
+			// Per the specs, throw exception caused by lower layer
+			throw new DiskMgrException(e, "DiskManager failed to write to page");
 		}
-		Integer frameIndex = bufferPageInfo.getFrameNumber(); 
-		Frame frame = frames[frameIndex];
-		try {
-			Minibase.DiskManager.write_page(frame.getPageId(), frame.getPage());
-		} catch (InvalidPageNumberException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (FileIOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}		
 	}
 	/**
 	* Used to flush all dirty pages in the buffer pool to disk
+	 * @throws DiskMgrException 
 	*
 	*/
-	public void flushAllPages() { 
+	public void flushAllPages() 
+			throws DiskMgrException { 
 		Frame frame;
 		for(int i = 0; i < numbufs; i++) {
 			frame = frames[i];
 			if(frame.isFrameDirty() && !frame.isReplacementCandidate()) {
 				try {
 					Minibase.DiskManager.write_page(frame.getPageId(), frame.getPage());
-				} catch (InvalidPageNumberException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (FileIOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}						
+				} catch (Exception e) {
+					// Per the specs, throw exception caused by lower layer
+					throw new DiskMgrException(e, "DiskManager failed to write to page");
+				}					
 			}
 		}
 	}

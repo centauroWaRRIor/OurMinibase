@@ -30,8 +30,8 @@ public class HashTable {
  	   	
     	Pair result; // Empty Pair by default
     	Bucket directoryEntry;
-		System.out.println ("PageID to be looked up: " + pageNumber.pid);
-		System.out.println ("Hash table returns h(" + pageNumber.pid + ")= " + h(pageNumber.pid));
+		//System.out.println ("PageID to be looked up: " + pageNumber.pid);
+		//System.out.println ("Hash table returns h(" + pageNumber.pid + ")= " + h(pageNumber.pid));
 		directoryEntry = directory[h(pageNumber.pid)];
     	result = directoryEntry.search(pageNumber);
     	if(result.isPairEmpty())
