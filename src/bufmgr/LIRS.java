@@ -6,20 +6,22 @@ import java.util.LinkedList;
 public class LIRS {
 
 	/* Linked List Declaration */
-    private LinkedList<Pair> freeList; // LIRS looks here first
-    private LinkedList<LIRS_Pair> candidateList; // LIRS looks here second
+    private LinkedList<LIRS_Stats> unpinnedList;
+    private LinkedList<LIRS_Stats> pinnedList;
     private Integer globalCount; // Gets incremented every time a page gets accessed
-	private LIRS_Pair victim;
+	//private LIRS_Pair victim;
 	
-	public LIRS(Integer sizeOfFreeList) {
+	public LIRS(Integer numbufs) {
 		
-	   freeList = new LinkedList<Pair>();
-	   candidateList = new LinkedList<LIRS_Pair>();
+	   unpinnedList = new LinkedList<LIRS_Stats>();
+	   pinnedList = new LinkedList<LIRS_Stats>();
 	   globalCount = 0;
-	   victim = null;
+	   //victim = null;
        // Add all the pages initially to the free pages list
-       for(int i = 0; i < sizeOfFreeList; i++) {
-    	  freeList.add(new Pair(-1, i));
+       for(int i = 0; i < numbufs; i++) {
+    	  //freeList.add(new Pair(-1, i));
+    	   LIRS_Stats tmpEntry = new LIRS_Stats(new Pair(-1, i));
+    	   unpinnedList.add(tmpEntry);
        }
 	}
 	
@@ -28,63 +30,89 @@ public class LIRS {
 	 */
 	public Pair getReplacementCandidate(PageId targetPage)
 			throws LIRSFailureException {
-		Pair returnCandidate = null;
-		Boolean status = false;
+//		Pair returnCandidate = null;
+//		Boolean status = false;
+		LIRS_Stats victim = null;
 		Integer oldpid;
-		// Look under free list first
-		if(!freeList.isEmpty()) {
-			returnCandidate = freeList.removeFirst();
-			oldpid = returnCandidate.getPageId().pid;
-			// Track this candidate using LIRS and the new target pid
-			returnCandidate.setPageId(targetPage.pid);
-			LIRS_Pair tmpLIRSEntry = new LIRS_Pair(returnCandidate);
-			// Start tracking this page with the LIRS algorithm
-			status = candidateList.add(tmpLIRSEntry);
-			// Return the old pid so that the pair entry can be
-			// removed from the hash table
-			returnCandidate.setPageId(oldpid);
+		int candidateIndex;
+		// Look under unpinned list only
+		if(!unpinnedList.isEmpty()) {
+//			returnCandidate = freeList.removeFirst();
+//			oldpid = returnCandidate.getPageId().pid;
+//			// Track this candidate using LIRS and the new target pid
+//			returnCandidate.setPageId(targetPage.pid);
+//			LIRS_Pair tmpLIRSEntry = new LIRS_Pair(returnCandidate);
+//			// Start tracking this page with the LIRS algorithm
+//			status = candidateList.add(tmpLIRSEntry);
+//			// Return the old pid so that the pair entry can be
+//			// removed from the hash table
+//			returnCandidate.setPageId(oldpid);
+			
+		   candidateIndex = computeStats(); // Updates Stats for all candidates being tracked by LIRS
+		   victim = unpinnedList.remove(candidateIndex);
+		   oldpid = victim.getCandidateInfo().getPageId().pid;
+		   // Track this entry under the pinned list now using target pid
+		   victim.getCandidateInfo().setPageId(targetPage.pid);
+		   // Reset stats for this new target pid
+		   victim.reset(); // Could have relied on constructor but this way is more explicit
+		   LIRS_Stats tmpLIRSEntry = new LIRS_Stats(victim);
+		   pinnedList.add(tmpLIRSEntry);
+		   // Return the old pid so that the pair entry can be
+		   // removed from the hash table
+		   victim.getCandidateInfo().setPageId(oldpid);
+		   return new Pair(victim.getCandidateInfo());  
 		}
-		else { // Now look for a candidate using LIRS
-		   computeStats(); // Updates Stats for all candidates being tracked by LIRS
-		   returnCandidate = victim.getCandidateInfo();
-		   victim.reset(); // reset statistics for this victim
-		}
-		if(!status || returnCandidate == null)
+		else { 
 			throw new LIRSFailureException(null, "LIRS Failed to pick a replacement candidate");
-		return new Pair(returnCandidate);
+		}
 	}
 	
 	public void deleteFreeListEntry (Pair entry) 
-			throws LIRSFailureException {
-		Boolean status = freeList.remove(entry);
-		LIRS_Pair tmpLIRSEntry = new LIRS_Pair(entry);
-		// Start tracking this page with the LIRS algorithm
-		status &= candidateList.add(tmpLIRSEntry);
+			throws LIRSFailureException {	
+		Boolean status = false;
+		LIRS_Stats tmpTransferEntry = new LIRS_Stats(entry);
+		int index = unpinnedList.indexOf(tmpTransferEntry);
+		if(index != -1) {
+			tmpTransferEntry = unpinnedList.remove(index);	
+			// Track this page under different list
+			status = pinnedList.add(tmpTransferEntry);
+		}
 		if(!status)
 			throw new LIRSFailureException(null, "LIRS Failed to delete from free list");
 	}
 	
-	public void insertFreeListEntry (Pair entry) {
-			//throws LIRSFailureException {
-		// Remove from list of candidates being tracked by LIRS
-		LIRS_Pair tempEntry = new LIRS_Pair(entry);
-	    candidateList.remove(tempEntry); // May or may not being tracked by LIRS
-	    // Now add to list of free pages
-//	    Boolean status = freeList.add(entry);
-//		if(!status)
-//			throw new LIRSFailureException(null, "LIRS Failed to insert into free list");
-	    freeList.addLast(entry);
+	public void insertFreeListEntry (Pair entry)
+			throws LIRSFailureException {
+//		// Remove from list of candidates being tracked by LIRS
+//		LIRS_Stats tempEntry = new LIRS_Stats(entry);
+//	    candidateList.remove(tempEntry); // May or may not being tracked by LIRS
+//	    // Now add to list of free pages
+////	    Boolean status = freeList.add(entry);
+////		if(!status)
+////			throw new LIRSFailureException(null, "LIRS Failed to insert into free list");
+//	    freeList.addLast(entry);
+		Boolean status = false;
+		LIRS_Stats tmpTransferEntry = new LIRS_Stats(entry);
+		int index = pinnedList.indexOf(tmpTransferEntry);
+		if(index != -1) {
+			tmpTransferEntry = pinnedList.remove(index);	
+			// Track this page under different list
+			status = unpinnedList.add(tmpTransferEntry);
+		}
+		if(!status)
+			throw new LIRSFailureException(null, "LIRS Failed to delete from free list");
+		
 	}
 	
 	public void updatePageAccessStats(Pair entry) 
 			throws LIRSFailureException {
-    	LIRS_Pair candidate = new LIRS_Pair(entry);
+    	LIRS_Stats lirsEntry = new LIRS_Stats(entry);
     	// Look for the given page
-    	int i = candidateList.indexOf(candidate);
+    	int i = pinnedList.indexOf(lirsEntry);
     	if(i != -1) {
-    	   candidate = candidateList.get(i);
-           candidate.updateRecency();
-           candidate.updateLastAccessed(globalCount);
+    	   lirsEntry = pinnedList.get(i);
+    	   lirsEntry.updateRecency();
+    	   lirsEntry.updateLastAccessed(globalCount);
            incGlobalCount();
         }
     	else 
@@ -92,32 +120,40 @@ public class LIRS {
 	}
 	
 	public Integer getFreeListSize() {
-		return freeList.size();
+		//return freeList.size();
+		return unpinnedList.size();
 	}
 	
 	/* Compute LIRS statistics for all candidates currently
-	 * in the list
+	 * in the unpinned list and return the index for the resulting candidate
 	 */
-	private void computeStats() {
-    	LIRS_Pair candidate;
+	private Integer computeStats() {
+    	LIRS_Stats entry = null;
+    	LIRS_Stats victim = null;
+    	Integer candidateIndex = -1;
     	// Walk up the list
-    	for(int i = 0; i < candidateList.size(); i++) {
-    		candidate = candidateList.get(i);
-    		candidate.computeWeight(globalCount); 
-    		if(i == 0)
-    			victim = candidate;
+    	for(int i = 0; i < unpinnedList.size(); i++) {
+    		entry = unpinnedList.get(i);
+    		entry.computeWeight(globalCount); 
+    		if(i == 0) {
+    			victim = entry;
+    			candidateIndex = 0;
+    		}
     		else {
-    			if(candidate.getWeight() > victim.getWeight())
-    				victim = candidate;
+    			if(entry.getWeight() > victim.getWeight()) {
+    				victim = entry;
+    				candidateIndex = i;
+    			}
     		}
     	}
+    	return candidateIndex;
 	}
 	
 	private void incGlobalCount() {
 		globalCount++; // TODO: Add wrapping around when spilled	
 	}
 	
-	private class LIRS_Pair {
+	private class LIRS_Stats {
 		
 	    Pair candidateInfo; // Stores page number and buffer's pool frame index
 	    Integer reuseDistance;
@@ -126,13 +162,21 @@ public class LIRS {
 	    Integer lastAccessed; // Value of globalCount last time 
 	                            // this page was accessed.
 	    
-	    public LIRS_Pair(Pair candidateInfo) {
+	    public LIRS_Stats(Pair candidateInfo) {
 	    	reset();
 	    	this.candidateInfo = new Pair(candidateInfo);
 	    }
 	    
+	    // Copy constructor
+	    public LIRS_Stats(LIRS_Stats other) {
+	    	this.candidateInfo = new Pair(other.getCandidateInfo());
+	    	this.reuseDistance = other.reuseDistance;
+	    	this.recency = other.recency;
+	    	this.weight = other.weight;
+	    	this.lastAccessed = other.lastAccessed;
+	    }
+	    
 	    public void reset() {
-	    	candidateInfo = null;
 	    	reuseDistance = Integer.MAX_VALUE;
 	    	recency = Integer.MAX_VALUE;
 	    	weight = 0;
@@ -176,12 +220,12 @@ public class LIRS {
 	 
 	        /* Check if o is an instance of LIRS_Pair or not
 	          "null instanceof [type]" also returns false */
-	        if (!(o instanceof LIRS_Pair)) {
+	        if (!(o instanceof LIRS_Stats)) {
 	               return false;
 	        }
 	         
 	        // typecast o to LIRS_Pair so that we can compare data members 
-	        LIRS_Pair c = (LIRS_Pair) o;
+	        LIRS_Stats c = (LIRS_Stats) o;
 	         
 	        if(c.candidateInfo != null)
 	           // Compare the relevant data members and return accordingly 

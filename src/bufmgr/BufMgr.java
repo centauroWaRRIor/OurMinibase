@@ -63,9 +63,13 @@ public class BufMgr {
 	 * @throws HashEntryNotFoundException 
 	 * @throws LIRSFailureException 
 	 * @throws DiskMgrException 
+	 * @throws BufferPoolExceededException 
 	*/
 	public void pinPage(PageId pageno, Page page, boolean emptyPage) 
-		throws HashEntryNotFoundException, LIRSFailureException, DiskMgrException {
+		throws HashEntryNotFoundException, 
+		LIRSFailureException, 
+		DiskMgrException, 
+		BufferPoolExceededException {
 		// TODO: Throw BufferPoolExceededException
 		Pair mgmInfo = null;
 		Boolean hashEntryFound = true;
@@ -74,49 +78,53 @@ public class BufMgr {
 		} catch (HashEntryNotFoundException e) {
 			hashEntryFound = false;
 			// Find a candidate for replacement
-			// TODO: line below may throw BufferPoolExceededException
-			// TODO: Only use this when replacementPolicy=LIRS
-			Pair replacementCandidate = lirsPolicy.getReplacementCandidate(pageno);
-	        Integer replacementIndex = replacementCandidate.getFrameNumber();
+            try {
+			   // TODO: Only use this when replacementPolicy=LIRS
+			   Pair replacementCandidate = lirsPolicy.getReplacementCandidate(pageno);
+		       Integer replacementIndex = replacementCandidate.getFrameNumber();
+                  
+	           // Flush replacement page before reusing
+	           if(frames[replacementIndex].isFrameDirty()) {
+	              flushPage(frames[replacementIndex].getPageId());
+	              frames[replacementIndex].setIsFrameDirty(false);
+	           }
 	        
-	        // Flush replacement page before reusing
-	        if(frames[replacementIndex].isFrameDirty()) {
-	           flushPage(frames[replacementIndex].getPageId());
-	           frames[replacementIndex].setIsFrameDirty(false);
-	        }
-	        
-	        // Bring in page from disk into this frame
-			try {
+	           // Bring in page from disk into this frame
 		       Minibase.DiskManager.read_page(pageno, 
 		    		                frames[replacementIndex].getPage());
+		       
+				/* Need to remove this entry from the hash table.
+				 * Exception only applies when the this is the 
+				 * first time using this frame
+				 */
+		        if(frames[replacementIndex].isHashed()) {
+		           
+					   hashTable.deleteEntry(replacementCandidate);
+				   
+		        }
+				// Set this frame for use with new page id
+				replacementCandidate.setPageId(pageno.pid);
+		        // Add new entry to hash table
+		        hashTable.insertEntry(replacementCandidate);
+		        // Lower initial condition flag for this frame (always true after first time)
+		        frames[replacementIndex].setIsHashed(true);
+		        // Update mgmInfo so control flow can continue as 
+		        // if nothing happened 
+		        mgmInfo = replacementCandidate;
+		       
+			} catch (LIRSFailureException exceedE) {
+				// Per the specs, throw exception caused by lower layer
+				throw new BufferPoolExceededException(exceedE, "Attempt to pin a page to buffer " 
+				                                    + "pool with no unpinned frame left");            	
+            } catch (HashEntryNotFoundException e1) {
+			      throw new HashEntryNotFoundException(e1, 
+					   "Attempted to delete a non existing entry in the hash table!");
 			} catch (Exception dskMgre) {
 				// Per the specs, throw exception caused by lower layer
 				throw new DiskMgrException(dskMgre, "DiskManager failed to read page " 
 				                                    + pageno.pid);
-			}
-	        
-			/* Need to remove this entry from the hash table.
-			 * Exception only applies when the this is the 
-			 * first time using this frame
-			 */
-	        if(frames[replacementIndex].isHashed()) {
-	           try {
-				   hashTable.deleteEntry(replacementCandidate);
-			   } catch (HashEntryNotFoundException e1) {
-			      throw new HashEntryNotFoundException(e1, 
-					   "Attempted to delete a non existing entry in the hash table!");
-			   }
-	        }
-			// Set this frame for use with new page id
-			replacementCandidate.setPageId(pageno.pid);
-	        // Add new entry to hash table
-	        hashTable.insertEntry(replacementCandidate);
-	        // Lower initial condition flag for this frame (always true after first time)
-	        frames[replacementIndex].setIsHashed(true);
-	        // Update mgmInfo so control flow can continue as 
-	        // if nothing happened 
-	        mgmInfo = replacementCandidate;
-		}		
+			} // End of inner try/catch block
+		} // End of main try/catch block	
 		Integer frameIndex = mgmInfo.getFrameNumber(); 
 		Frame frame = frames[frameIndex];
 		// Update pageid for this frame here
