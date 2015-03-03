@@ -164,24 +164,23 @@ public class BufMgr {
 	*
 	* @param pageno page number in the Minibase.
 	* @param dirty the dirty bit of the frame
+	 * @throws HashEntryNotFoundException 
 	 * @throws LIRSFailureException 
 	*/
 	public void unpinPage(PageId pageno, boolean dirty) 
-	throws PageUnpinnedException, LIRSFailureException
-    {
+	throws HashEntryNotFoundException, LIRSFailureException {
 		Pair mgmInfo = null;
 		try {
 			mgmInfo = hashTable.hashKey(pageno);
 		} catch (HashEntryNotFoundException e) {
-			e.printStackTrace();
-			throw new PageUnpinnedException(e,
+			throw new HashEntryNotFoundException(e,
     				"Trying to unpin a page not found in the buffer pool"); 
 		}
 		Integer frameIndex = mgmInfo.getFrameNumber(); 
 		Frame frame = frames[frameIndex];
 		// If pin_count was zero 
         if(frame.isReplacementCandidate())
-        	throw new PageUnpinnedException(null,
+        	throw new HashEntryNotFoundException(null,
     				"Trying to unpin a page not found in the buffer pool");
         else {
         	if(dirty)
@@ -235,10 +234,24 @@ public class BufMgr {
 	*
 	* @param globalPageId the page number in the data base.
 	 * @throws DiskMgrException 
+	 * @throws PagePinnedException 
 	*/
 	public void freePage(PageId globalPageId) 
-			throws DiskMgrException
+			throws DiskMgrException, PagePinnedException
 	{
+		Pair mgmInfo = null;
+		Boolean hashEntryFound = true;
+		try {
+			mgmInfo = hashTable.hashKey(globalPageId);
+		} catch (HashEntryNotFoundException e) {
+			hashEntryFound = false;
+        }
+		if(hashEntryFound) {
+			Integer frameIndex = mgmInfo.getFrameNumber(); 
+			Frame frame = frames[frameIndex];
+            if(!frame.isReplacementCandidate())
+            	throw new PagePinnedException(null, "Attempt to free a page that is still pinned");
+		}
 		try {
 			Minibase.DiskManager.deallocate_page(globalPageId);
 		} catch (Exception e) {
