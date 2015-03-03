@@ -112,11 +112,11 @@ class BMDriver extends TestDriver implements GlobalConst {
 
 		//Running test1() to test6()
 		if (!test1()) { _passAll = FAIL; }    
-		//if (!test2()) { _passAll = FAIL; }
-		//if (!test3()) { _passAll = FAIL; }
-		//if (!test4()) { _passAll = FAIL; }
-		//if (!test5()) { _passAll = FAIL; }
-		//if (!test6()) { _passAll = FAIL; }
+		if (!test2()) { _passAll = FAIL; }
+		if (!test3()) { _passAll = FAIL; }
+		if (!test4()) { _passAll = FAIL; }
+		if (!test5()) { _passAll = FAIL; }
+		if (!test6()) { _passAll = FAIL; }
 
 		return _passAll;
 	}
