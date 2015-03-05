@@ -1,5 +1,6 @@
 package heap;
 
+import java.util.ArrayList;
 import java.util.TreeSet;
 import java.util.Comparator;;
 
@@ -7,28 +8,49 @@ import global.RID;
 import global.Minibase;
 import global.Page;
 import global.PageId;
+import global.Convert;
+import global.GlobalConst;
 
 import heap.Tuple;
 import heap.HFPage;
 
 import chainexception.ChainException;
 
-class HeapFileUtil {
+class HeapFileUtil implements GlobalConst {
     /* convenience functions */
     static HFPage getHFPage(PageId pid) {
+        /*
         Page page = new Page();
-        Minibase.BufferManager.pinPage(pid, page, true);
-        return HFPage(page);
+        System.out.print( String.format( "Trying to pin pageno %d\n", pid.pid ) );
+        Minibase.BufferManager.pinPage(pid, page, PIN_DISKIO);
+        return new HFPage(page);
+        */
+        HFPage hfp = new HFPage();
+        hfp.setCurPage(pid);
+        return hfp;
     }
     
-    static void releaseHFPage(HFPage hfp, bool dirty) {
+    static void releaseHFPage(HFPage hfp, boolean dirty) {
         Minibase.BufferManager.unpinPage(hfp.getCurPage(), dirty);
     }
 
     static HFPage newHFPage() {
         Page page = new Page();
         PageId pid = Minibase.BufferManager.newPage(page, 1);
-        return new HFPage(page);
+        System.out.print( String.format( "newHFPage -> page id [%d] \n", pid.pid ) );
+        HFPage hfp = new HFPage();
+        hfp.setCurPage(pid);
+        System.out.println( "printing the HFPage" );
+        hfp.print();
+
+        System.out.print( String.format( "newHFPage -> free space [%d] \n", hfp.getFreeSpace() ) );
+
+        return hfp;
+    }
+
+    static void printNumPinnedPages() {
+        System.out.print( String.format( "Number of pinned pages [%d]\n", 
+                    Minibase.BufferManager.getNumBuffers() - Minibase.BufferManager.getNumUnpinned() ) );
     }
 };
 
@@ -37,16 +59,21 @@ class DirectoryEntry {
         this.pid = pid;
         this.capacity = capacity;
         this.num_records = num_records;
-        this.rid_dirent = new RID();
+        this.rid = new RID();
 
         /* we will save the page id (int), capacity, and num_records 
            3 integers */
         this.data = new byte[getRecSize()];
     }
 
-    public static int getRecSize()    { return 4+4+4; }
-    public int getPageCapacity()       { return capacity; }
-    public PageId getPID()     { return pid; }
+    public void setCapacity( int capacity ) { this.capacity = capacity; }
+    public static int getRecSize()      { return 4+4+4; }
+    public int getPageCapacity()        { return capacity; }
+    public PageId getPageId()           { return pid; }
+
+    public RID getRID() { return rid; }
+    public void setRID(RID rid) { this.rid = rid; }
+    public PageId getOriginDirectoryPage() { return rid.pageno; }
 
     public byte[] getByteArray() 
 	    throws java.io.IOException {
@@ -55,9 +82,14 @@ class DirectoryEntry {
 	    */
 		    Convert.setIntValue (pid.pid, 0, data);
 		    Convert.setIntValue (capacity, 4, data);
-		    Convert.setStringValue (num_records, 8, data);
+		    Convert.setIntValue (num_records, 8, data);
 
 		    return data;
+    }
+
+    public Tuple getTuple() throws java.io.IOException {
+        byte [] byteArray = getByteArray();
+        return new Tuple( byteArray, 0, byteArray.length );
     }
 
     /* this is what we save and what the DirEnt points to */
@@ -68,22 +100,30 @@ class DirectoryEntry {
     private byte[] data;
 
     /* this is the RID of the Directory Entry itself */
-    RID rid_dirent;
+    RID rid;
 };
 
 class CompareSizeDirectoryEntry implements Comparator<DirectoryEntry> {
     @Override 
     public int compare(DirectoryEntry dirent1, DirectoryEntry dirent2) {
-        return( dirent1.getCapacity() - dirent2.getCapacity() );
+        return( dirent1.getPageCapacity() - dirent2.getPageCapacity() );
     }
 }
 
-class Directory {
+class ComparePIDDirectoryEntry implements Comparator<DirectoryEntry> {
+    @Override 
+    public int compare(DirectoryEntry dirent1, DirectoryEntry dirent2) {
+        return( dirent1.getPageId().pid - dirent2.getPageId().pid );
+    }
+}
+
+class Directory implements global.GlobalConst {
     public Directory(PageId pid) {
         startingPID = pid;
 
         /* create our tree to manage the capacity */
-        page_capacity_tree = new TreeSet<DirectoryEntry> ( new CompareSizeDirectoryEntry() );
+        page_capacity_array = new ArrayList<DirectoryEntry> ();
+        page_id_tree = new TreeSet<DirectoryEntry> ( new ComparePIDDirectoryEntry() );
     }
 
     /*
@@ -95,23 +135,32 @@ class Directory {
         6) Get a Directory Page to add this Directory Entry.
         7) Insert the newly created Directory Entry in this Directory Page.
         8) Unpin the Directory Page.
-        9) Return this Directory Entry.
+        9) Add the Directory Entry to the in memory data structures
+        10) Return this Directory Entry.
 
         TBD:
         - some inefficiency since we create a new page but do not return it.
         - we could return the page and take DirectoryEntry as a parameter.
     */
-    public DirectoryEntry getDirectoryEntryWithCapacity(int size) {
+    public DirectoryEntry getDirectoryEntryWithCapacity(int size) 
+                throws java.io.IOException {
         /* search in the tree for the Directory Entries with the closest size */
-        boolean existing_page = false;
-        DirectoryEntry dirent =  page_capacity_tree.ceiling( new DirectoryEntry(null, size, -1) );
-
+        DirectoryEntry dirent = getFirstGreaterThan(size);
         if( dirent != null ) {
             return dirent;
         }
 
+        System.out.println( "getDirectoryEntryWithCapacity\n" );
+        HeapFileUtil.printNumPinnedPages();
+
         /* page does not exist.  create new data page */
         HFPage hfp_data = HeapFileUtil.newHFPage();
+
+        System.out.println( "getDirectoryEntryWithCapacity after newHFPage\n" );
+        HeapFileUtil.printNumPinnedPages();
+
+        System.out.print( String.format( "getDirectoryEntryWithCapacity - created page [%d]\n", 
+                        hfp_data.getCurPage().pid ) );
 
         /* create a new Directory Entry to hold this page */
         dirent = new DirectoryEntry(hfp_data.getCurPage(), hfp_data.getFreeSpace(), 0);
@@ -119,11 +168,28 @@ class Directory {
         /* get a Directory Page to host this Directory Entry */
         HFPage hfp_dir = getDirectoryPageForNewDirectoryEntry();
 
-        /* Insert the Directory Entry into this page */
-        hfp_dir.insertRecord( dirent.getByteArray() );
+        System.out.println( "getDirectoryEntryWithCapacity after getDirectoryPage...\n" );
+        HeapFileUtil.printNumPinnedPages();
 
+        /* Insert the Directory Entry into this page */
+        byte [] ba = dirent.getByteArray();
+        System.out.print( String.format( "Length of the directory record [%d]\n", ba.length ) );
+
+        RID rid = hfp_dir.insertRecord( dirent.getByteArray() );
+
+        System.out.print( String.format( "After inserting directory entry pid [%d] slot [%d]\n", 
+                        rid.pageno.pid, rid.slotno ) );
+
+        System.out.println( "getDirectoryEntryWithCapacity: printing hfp_dir" );
+        hfp_dir.print();
+        
         /* Unpin this Directory Page - indicate that the page is Dirty */
-        Minibase.BufferManager.unpinPage(hfp_dir.getCurPage(), true);
+        //Minibase.BufferManager.unpinPage(hfp_dir.getCurPage(), true);
+
+        /* The Directory Entry needs to remember where it came from */
+        dirent.setRID( rid );
+
+        /* This dirent is added to in memory once the capacity is updated */
 
         return dirent;
     }
@@ -141,37 +207,119 @@ class Directory {
     public HFPage getDirectoryPageForNewDirectoryEntry() {
         PageId pid;
         /* Go through the Directory Pages, starting from the Root */
-        for( PageId pid = startingPID; pid != null; ) {
+        for( pid = startingPID; pid != null; ) {
             /* pin the page */
+            System.out.print( String.format( "before pinning startingPID [%d]\n", startingPID.pid ) );
+            HeapFileUtil.printNumPinnedPages();
+
             HFPage hfp_dir = HeapFileUtil.getHFPage(pid);
 
+            System.out.print( String.format( "free space from directory page:  [%d]\n", hfp_dir.getFreeSpace() ) );
+            HeapFileUtil.printNumPinnedPages();
+
             /* is there capacity? */
-            if( hfpage.getFreeSpace() >= DirectoryEntry.getRecSize() ) {
+            if( hfp_dir.getFreeSpace() >= DirectoryEntry.getRecSize() ) {
                 /* found it */
                 /* caller needs to unpin the page */
-                return hfpage;
+                return hfp_dir;
             } else {
-                pid = hfpage.getNextPage();
+                pid = hfp_dir.getNextPage();
             }
 
+            /* release page to the buffer pool */
             HeapFileUtil.releaseHFPage(hfp_dir, false);
         }
 
         /* if we are here, we did not find a Directory Page - need to allocate one */
+        /* pid is pointing to the last page in the Directory Pages Linked List */
         HFPage hfp_dir = HeapFileUtil.getHFPage(pid);
         HFPage new_hfp_dir = HeapFileUtil.newHFPage();
 
         hfp_dir.setNextPage(new_hfp_dir.getCurPage());
-        new_hfpage_dir.setPrevPage(hfp_dir.getCurPage());
+        new_hfp_dir.setPrevPage(hfp_dir.getCurPage());
+
+        HeapFileUtil.releaseHFPage( hfp_dir, UNPIN_DIRTY );
 
         /* caller needs to unpin this */
-        return new_hfpage;
+        return new_hfp_dir;
     }
 
-    PageId getStartingPid() { return starting_pid; }
+    public void addDirectoryEntryToInMemory(DirectoryEntry dirent) { 
+        System.out.println( "Not used - error" );
+    }
+
+    public void updateDirectoryEntryInMemory(DirectoryEntry dirent) { 
+        /* add in both the trees */
+        page_id_tree.add(dirent);
+        page_capacity_array.add(dirent);
+    }
+
+    /*
+        Linear performance now.
+        Needs to be optimized
+    */
+    public DirectoryEntry getFirstGreaterThan(int capacity) {
+        int found_index = -1;
+        int found_capacity = Integer.MAX_VALUE;
+        DirectoryEntry dirent = null;
+        for( int i = 0; i < page_capacity_array.size(); i++ ) {
+            dirent = page_capacity_array.get(i);
+            if( dirent.getPageCapacity() >= capacity ) {
+                if( dirent.getPageCapacity() < found_capacity ) {
+                    found_index = i;
+                    found_capacity = dirent.getPageCapacity();
+                }
+            }
+        }
+
+        if( found_index > 0 ) { 
+            page_capacity_array.remove(found_index);
+
+            /* to be consistent, we will remove it from the page_id_set as well */
+            page_id_tree.remove(dirent);
+
+            return dirent;
+        }
+
+        return null;
+    }
+
+    /*
+        Updates the Directory Entry;  this happens when capacity changes.
+
+        1. Update the database.
+        2. Update the internal memory structure.
+    */
+    public void updateDirectoryEntry(DirectoryEntry dirent) 
+                throws java.io.IOException { 
+        /* update the directory with the new Directory Entry */
+        HFPage hfp_dir = HeapFileUtil.getHFPage(dirent.getOriginDirectoryPage() );
+
+        System.out.println( "printing the HFPage\n" );
+        hfp_dir.print();
+
+        /* insert the record */
+        Tuple t = dirent.getTuple();
+        RID rid = dirent.getRID();
+        System.out.print( String.format( "length of tuple [%d]\n", t.getLength() ) );
+        System.out.print( String.format( "RID for update: pid [%d] slot [%d]\n", rid.pageno.pid, rid.slotno ) );
+        hfp_dir.updateRecord( dirent.getRID(), dirent.getTuple() );
+
+        HeapFileUtil.releaseHFPage(hfp_dir, true);
+
+        updateDirectoryEntryInMemory(dirent);
+    }
+
+    public boolean doesPageIDExist(PageId pid) {
+        return page_id_tree.contains( new DirectoryEntry(pid,-1,-1) );
+    }
+
+    PageId getStartingPID() { return startingPID; }
 
     private PageId startingPID;
-    private TreeSet<DirectoryEntry> page_capacity_tree;
+    //private TreeSet<DirectoryEntry> page_capacity_tree;
+    private TreeSet<DirectoryEntry> page_id_tree;
+    private ArrayList<DirectoryEntry> page_capacity_array;
 }
 
 public class HeapFile {
@@ -180,7 +328,11 @@ public class HeapFile {
         - create a file entry in the DB using DiskMgr.
     */
     public HeapFile(String name) {
-        directory = new Directory(0);
+        PageId pid = Minibase.DiskManager.allocate_page();
+
+        System.out.print( String.format( "Initializing Heapfile - allocating a new page %d\n", pid.pid ) );
+
+        directory = new Directory( pid );
 
         /* for now, assume it is a new file */
         Minibase.DiskManager.add_file_entry(name, directory.getStartingPID() );
@@ -193,31 +345,28 @@ public class HeapFile {
         - insert the user record into this.
         - update the Directory Entry with the new information about the page.
     */
-    public RID insertRecord(byte[] record) throws ChainException {
+    public RID insertRecord(byte[] record) throws ChainException, java.io.IOException {
 
         /* get the DirectoryEntry that points to the page we want */
         DirectoryEntry dirent = directory.getDirectoryEntryWithCapacity( record.length );
 
         /* load the page from disk through the buffer manager */
-        HFPage hfp_data  = HeapFileUtil.getHFPage(dirent.getPID());
+        HFPage hfp_data  = HeapFileUtil.getHFPage(dirent.getPageId());
 
         /* insert the data */
         RID rid =  hfp_data.insertRecord(record);
 
         /* update the Directory Entry with the new information */
-        dirent.capacity = hfp_data.getFreeSpace();
+        dirent.setCapacity( hfp_data.getFreeSpace() );
         /* dirent.numRecords = hfp_data.... */
 
+        System.out.println( "Printing the data page\n" );
+        hfp_data.print();
+
         /* unpin the data page */
-        HeapFileUtil.releaseHFPage(hfp_data, true);
+        //HeapFileUtil.releaseHFPage(hfp_data, true);
 
-        /* update the directory with the new Directory Entry */
-        hfp_dir = HeapFileUtil.getHFPage(dirent.getRID().pageno);
-
-        /* insert the record */
-        hfp_dir.updateRecord( dirent.getRID(), dirent.getByteArray() );
-
-        HeapFileUtil.releaseHFPage(hfp_dir, true);
+        directory.updateDirectoryEntry(dirent);
 
         return rid;
     }
@@ -235,8 +384,19 @@ public class HeapFile {
         return false;
     }
 
+    /*
+        1. check if we have the PageID in our directory.
+        2. If yes, make a HFPage out of the PageID and get the record.
+    */
     public Tuple getRecord(RID rid) {
-        return null;
+        if( !directory.doesPageIDExist(rid.pageno) ) 
+            return null;
+
+        HFPage hfp_data = HeapFileUtil.getHFPage(rid.pageno);
+        byte[] byteArray = hfp_data.selectRecord(rid);
+        HeapFileUtil.releaseHFPage(hfp_data, false);
+
+        return new Tuple(byteArray, 0, byteArray.length);
     }
 
     public HeapScan openScan() { 
