@@ -2,9 +2,10 @@ package tests;
 import global.GlobalConst;
 import global.Minibase;
 
-import java.io.IOException;
-
-import chainexception.ChainException;
+import java.io.*;
+import java.util.*;
+import java.lang.*;
+import chainexception.*;
 
 //    Major Changes:
 //    1. Change the return type of test() functions from 'int' to 'boolean'
@@ -29,10 +30,13 @@ import chainexception.ChainException;
  * 
  */
 
-public class TestDriver implements GlobalConst{
+public class TestDriver implements GlobalConst {
 
   public final static boolean OK   = true; 
   public final static boolean FAIL = false; 
+
+  protected String dbpath;  
+  protected String logpath;
   
   /** Default database size (in pages). */
   protected int DB_SIZE = 10000;
@@ -40,11 +44,8 @@ public class TestDriver implements GlobalConst{
   /** Default buffer pool size (in pages) */
   protected int BUF_SIZE = 100;
   
-  /** Default number of pages to be looked ahead */
+  /** Default look ahead size */
   protected int LAH_SIZE = 10;
-
-  protected String dbpath;  
-  protected String logpath;
   
 
   /** 
@@ -211,16 +212,15 @@ public class TestDriver implements GlobalConst{
 
     return _passAll;
   }
-  
+
   /**
    * Creates a new database on the disk.
    */
   protected void create_minibase() {
-    System.out.println("Creating database...\nReplacer: " + "LRU_Look_ahead");
-    new Minibase(dbpath, DB_SIZE, BUF_SIZE, LAH_SIZE, "LRU_Look_ahead", false);
+    System.out.println("Creating database...\nReplacer: " + "CLOCK"); //CLOCK replacement policy
+    new Minibase(dbpath, DB_SIZE, BUF_SIZE, LAH_SIZE, "CLOCK", false);
   }
-
-
+  
   /**
    * Used to verify whether the exception thrown from
    * the bottom layer is the one expected.
