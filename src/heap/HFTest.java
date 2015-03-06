@@ -830,11 +830,13 @@ class DummyRecord  {
 	 */
 	public DummyRecord(byte [] arecord) 
 	throws java.io.IOException {
+        // ab -> moved it here:
+		setRecLen(arecord.length);
 		setIntRec (arecord);
 		setFloRec (arecord);
 		setStrRec (arecord);
 		data = arecord; 
-		setRecLen(name.length());
+		//setRecLen(name.length());
 	}
 
 	/** constructor: translate a tuple to a DummyRecord object
@@ -888,6 +890,7 @@ class DummyRecord  {
 	throws java.io.IOException {
 		// System.out.println("reclne= "+reclen);
 		// System.out.println("data size "+_data.size());
+
 		name = Convert.getStringValue (8, _data, reclen-8);
 	}
 

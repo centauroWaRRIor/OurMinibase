@@ -1,4 +1,4 @@
-package tests;
+package heap;
 import global.GlobalConst;
 import global.Minibase;
 

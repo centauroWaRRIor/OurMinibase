@@ -1,9 +1,15 @@
 package heap;
 
+import java.util.Arrays;
+
 import global.Convert;
 import global.GlobalConst;
 import global.Minibase;
 import global.RID;
+import global.PageId;
+import global.Page;
+
+import heap.HFPage;
 import heap.HeapFile;
 import heap.HeapScan;
 import heap.Tuple;
@@ -17,7 +23,7 @@ import chainexception.ChainException;
     protected as opposed to the private type in C++.
  */
 
-class MyTestDriver extends TestDriver implements GlobalConst
+class MyTest2Driver extends TestDriver implements GlobalConst
 {
 
 	private final static boolean OK = true;
@@ -26,7 +32,7 @@ class MyTestDriver extends TestDriver implements GlobalConst
 	private int choice;
 	private final static int reclen = 32;
 
-	public MyTestDriver () {
+	public MyTest2Driver () {
 		super("hptest");
         choice = 1;             // baby steps
 		//choice = 100;      // big enough for file to occupy > 1 data page
@@ -777,10 +783,109 @@ class MyTestDriver extends TestDriver implements GlobalConst
 		return (status == OK);
 	}
 
+    static void printNumPinnedPages( String s ) {
+        System.out.printf( "[%s] Number of pinned pages [%d]\n", 
+                    s, Minibase.BufferManager.getNumBuffers() - Minibase.BufferManager.getNumUnpinned() );
+    }
+
 	protected boolean test6 ()  {
 
-		System.out.println ("\n  Test 6: Insert and scan fixed-size records\n");
 		boolean status = OK;
+        printNumPinnedPages( "start" );
+
+        HFPage hfp = new HFPage();
+        PageId pid = Minibase.BufferManager.newPage(hfp, 1);
+        System.out.print( String.format( "allocated page [%d]\n", pid.pid ) );
+
+        printNumPinnedPages( "after allocate_page" );
+
+        Minibase.DiskManager.add_file_entry( "a", pid );
+
+        hfp.setCurPage(pid);
+        //hfp.setPage(page);
+
+        System.out.printf( "Printing HFP\n" );
+        hfp.print();
+
+		//fixed length record
+        int i = 10;
+		DummyRecord rec = new DummyRecord(reclen);
+		rec.ival = i;
+		rec.fval = (float) (i*2.5);
+		rec.name = "record" + i;
+        RID rid = null;
+        byte[] ba = null;
+
+		try {
+            ba = rec.toByteArray();
+			rid = hfp.insertRecord(ba);
+		} catch (Exception e) {
+			status = FAIL;
+			System.err.println ("*** Error inserting record " + i + "\n");
+			e.printStackTrace();
+		}
+
+        System.out.printf( "Printing HFP after insertion\n" );
+        hfp.print();
+        System.out.printf( "Byte Array after insertion: [%s]\n", Arrays.toString(ba) );
+
+        byte [] ba2 = hfp.selectRecord(rid);
+        System.out.printf( "Byte Array after reading from HFPage [%s]\n", Arrays.toString(ba2) );
+
+        DummyRecord rec2 = null;
+        try { 
+            rec2 = new DummyRecord(ba2);
+        } catch( Exception e ) {
+            e.printStackTrace();
+        }
+        System.out.printf( "rec2 (reading from HFP) ival [%d], fval[%f] name[%s]\n",
+                rec2.ival, rec2.fval, rec2.name );
+
+
+        i = 12;
+		//rec = new DummyRecord(reclen);
+		rec.ival = i;
+		rec.fval = (float) (i*2.5);
+		rec.name = "record" + i;
+
+		try {
+            Tuple t = new Tuple( rec.toByteArray(), 0, reclen);
+            System.out.printf("length of tuple [%d]\n", t.getLength() );
+            ba = t.getTupleByteArray();
+            System.out.printf( "String version of the Byte Array [%s]\n", Arrays.toString(ba) );
+            hfp.updateRecord(rid,t); 
+		} catch (Exception e) {
+			status = FAIL;
+			System.err.println ("*** Error inserting record " + i + "\n");
+			e.printStackTrace();
+		}
+
+        System.out.printf( "Printing HFP after insertion\n" );
+        hfp.print();
+
+        printNumPinnedPages( "after allocate_page" );
+
+        System.out.println( "Unpinning the page\n" );
+        /* let us unpin the page and re-read it */
+        //page.copyPage(hfp);
+
+        Minibase.BufferManager.unpinPage(pid, true); 
+        //Minibase.BufferManager.flushPage(pid);
+
+        printNumPinnedPages( "after unpinning" );
+
+        //Page page2 = new Page();
+        HFPage hfp2 = new HFPage();
+        Minibase.BufferManager.pinPage(pid, hfp2, false);
+
+        System.out.println( "Printing the HFPage\n" );
+        //hfp2.setPage(page2);
+        hfp2.setCurPage(pid);
+        hfp2.print();
+
+        /*
+
+		System.out.println ("\n  Test 6: Insert and scan fixed-size records\n");
 		RID rid = new RID();
 		HeapFile f = null;
 
@@ -842,7 +947,6 @@ class MyTestDriver extends TestDriver implements GlobalConst
 			}
 		}
 
-/*
 		// In general, a sequential scan won't be in the same order as the
 		// insertions.  However, we're inserting fixed-length records here, and
 		// in this case the scan must return the insertion order.
@@ -979,11 +1083,11 @@ class MyTestDriver extends TestDriver implements GlobalConst
 	}
 }
 
-public class MyTest {
+public class MyTest2 {
 
 	public static void main (String argv[]) {
 
-		MyTestDriver hd = new MyTestDriver();
+		MyTest2Driver hd = new MyTest2Driver();
 		boolean dbstatus;
 
 		dbstatus = hd.runTests();
