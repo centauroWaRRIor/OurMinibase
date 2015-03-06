@@ -2,13 +2,20 @@
 TODO:
 
 - In memory structure for checking capacity of pages
-- Saving and re-running
+- Saving and re-running: is thie required??
 - Exceptions
-- Update and Insert
-- HeapScan
-- Increase the number of Inserts (more data pages;  more directory pages)
+- Update and Delete
+- HeapScan: DONE
+- Increase the number of Inserts (more data pages;  more directory pages): DONE
 
 - Confirm if the number of pages I am getting is OK.  I got 7 pages for 100 records
+
+- In HeapScan(), why does getNext() have a RID?  Are we supposed to populate it? DONE
+- I am being conservative in unpinning in HeapScan.  The requirements are that I pin at least one
+  page by the time the constructor is called.
+  Even after all the data is over, I need to hold onto one page!!
+  I am keeping the Directory Page for now.
+  We need to clean this up during finalize();
 
 
 NOTES:
@@ -74,6 +81,19 @@ class DirectoryEntry {
         this.data = new byte[getRecSize()];
     }
 
+    public DirectoryEntry(byte [] ba) {
+        String function_name = "DirectoryEntry(byte[] ba)";
+        this.data = ba;
+        if( ba.length != getRecSize() ) {
+            Log.log( LogLevel.NONE, "%s: incorrect length for Byte Array; expected [%d] received [%d]\n",
+                    function_name, getRecSize(), ba.length );
+            /* TBD - need to raise an exception */
+        }
+        pid = new PageId( Convert.getIntValue(0, ba) );
+        capacity = Convert.getIntValue(4, ba);
+        num_records = Convert.getIntValue(8, ba);
+    }
+
     public void setCapacity( int capacity ) { this.capacity = capacity; }
     public static int getRecSize()      { return 4+4+4; }
     public int getPageCapacity()        { return capacity; }
@@ -117,6 +137,18 @@ class RecCountEntry {
         data = new byte[getRecSize()];
     }
 
+    public RecCountEntry(byte[] ba) {
+        String function_name = "RecCountEntry Constructor";
+
+        if( ba.length != getRecSize() ) {
+            /* throw an exception */
+            Log.log( LogLevel.NONE, "%s: expected length [%d] received [%d]\n", 
+                function_name, getRecSize(), ba.length );
+        }
+        data = ba;
+        reccnt = Convert.getIntValue(0,data);
+    }
+
     public byte [] getByteArray() throws java.io.IOException {
         Convert.setIntValue( reccnt, 0, data ); 
         return data;
@@ -128,6 +160,7 @@ class RecCountEntry {
     }
 
     public int getRecSize() { return 4; }
+    int getCount() { return reccnt; }
 
     int reccnt;
     private byte[] data;
@@ -407,13 +440,204 @@ class Directory implements global.GlobalConst {
         Minibase.BufferManager.unpinPage(startingPID, true);
     }
 
+    /*
+        reads the record count from the file
+    */
+    private void readRecCount(HFPage page_dir) {
+        String function_name = "readRecCount";
+
+        Log.log( LogLevel.MOST, "%s: page id [%d]\n", function_name, page_dir.getCurPage().pid );
+        this.rid_reccount = page_dir.firstRecord();
+        if( rid_reccount == null ) {
+            /* TBD - throw an exception */
+            Log.log( LogLevel.NONE, "%s: got a NULL record count record!\n" );
+            return;
+        }
+
+        byte[] ba = page_dir.selectRecord(rid_reccount);
+        RecCountEntry rce = new RecCountEntry(ba);
+        this.reccount = rce.getCount();
+
+        Log.log( LogLevel.LESS, "%s: read count from file [%d]\n", function_name,  this.reccount );
+    }
+
     public void incRecCount() throws java.io.IOException { 
         reccount++;
         updateRecCount();
     }
 
-    PageId getStartingPID()     { return startingPID; }
+    public void decRecCount() throws java.io.IOException { 
+        reccount--;
+        updateRecCount();
+    }
+
+    /*
+        Ideally we need to validate that the rid_dir belongs to the set of 
+        Directory Pages - we will assume so now.
+
+        1. Construct a HFPage from rid's pageno
+        2. Read the data pointed by this rid as a Byte Array.
+        3. Convert to a Directory Entry.
+        4. Unpin HFPage
+        5. Return the page id.
+    */
+    public PageId getPageIdFromDirectoryRID(RID rid_dir) {
+        HFPage page = new HFPage();
+        Minibase.BufferManager.pinPage(rid_dir.pageno, page, false);
+        page.setCurPage(rid_dir.pageno);
+        byte[] ba = page.selectRecord(rid_dir);
+        DirectoryEntry dirent = new DirectoryEntry(ba);
+        PageId pid = dirent.getPageId();
+        Minibase.BufferManager.unpinPage(rid_dir.pageno, false);
+        return pid;
+    }
+
+    /* 
+        1. rid_current is a valid RID for a Directory Entry.
+        2. Check if the current directory page has any more.
+        3. If yes for 2, we are done.
+        4. If no, check if there is a next page in the Directory 
+        5. Repeat 2.
+    */
+    public RID getNextDirectoryRID( RID rid_dir ) {
+        String function_name = "getNextDirectoryRID";
+
+        RID rid = null;
+
+        PageId pid = rid_dir.pageno;
+        HFPage page_dir = new HFPage();
+        Minibase.BufferManager.pinPage(pid, page_dir, false);
+        page_dir.setCurPage(pid);
+
+        /* if there is another Directory Entry in this page, we are done */
+        if( page_dir.hasNext(rid_dir) ) {
+
+            rid = page_dir.nextRecord(rid_dir);
+            Log.log( LogLevel.MORE, "%s: Found another directory entry pageno [%d] slotno [%d]\n",
+                        function_name, rid.pageno.pid, rid.slotno );
+            Minibase.BufferManager.unpinPage(pid, false);
+            return rid;
+        }
+
+        PageId next_pid = page_dir.getNextPage();
+        /* unpin the old page */
+        Minibase.BufferManager.unpinPage(pid, false);
+
+        while( next_pid.pid != -1 ) {
+            /* pin this page */
+            page_dir = new HFPage();
+            Minibase.BufferManager.pinPage(next_pid, page_dir, false);
+            page_dir.setCurPage(next_pid);
+
+            Log.log( LogLevel.MOST, "%s: checking next directory page [%d]\n", function_name, next_pid.pid );
+
+            /* check if there is a single record in this Directory Page */
+            rid = page_dir.firstRecord();
+            if( rid != null ) {
+                Minibase.BufferManager.unpinPage(next_pid, false);
+                return rid;
+            }
+        }
+
+        Log.log( LogLevel.MOST, "%s: Done with all directory entries\n", function_name );
+        /* we are done now! */
+        return null;
+    }
+
+    /*
+        1. Locate the Page with this RID in the Direcotory using the In Memory Tree.
+        2. If not found - error.
+        3. Remove the data from the Page first.  This may make the Page empty, but we are not cleaning it.
+        4. Then, remove the data from the Directory Page.  The Directory page is found in the Directory Entry
+           object.
+        5. Decrement the number of objects and update Entry.
+    */
+    public void deleteRecord( RID rid ) throws java.io.IOException {
+        String function_name = "deleteRecord";
+
+        DirectoryEntry dirent = page_id_tree.ceiling( new DirectoryEntry( rid.pageno, -1, -1 ) );
+        if( dirent == null  || (dirent.getPageId().pid != rid.pageno.pid) ) {
+            /* TBD - need to raise an exception */
+            Log.log( LogLevel.NONE, "%s: could not find [%d] to delete\n", function_name, rid.pageno.pid );
+            return;
+        }
+
+        Log.log( LogLevel.MOST, "%s: Found the Directory Entry for RID\n", function_name  );
+
+        /* now, delete the entry in the data page */
+        HFPage page_data = new HFPage();
+        Minibase.BufferManager.pinPage( rid.pageno, page_data, false );
+        page_data.setCurPage(rid.pageno);
+        page_data.deleteRecord( rid );
+        Minibase.BufferManager.unpinPage( rid.pageno, true );
+        Log.log( LogLevel.MORE, "%s: Deleted record [%d] slotno [%d]\n", 
+                function_name, rid.pageno.pid, rid.slotno );
+
+
+        /* now delete the Directory Entry */
+        HFPage page_dir = new HFPage();
+        Minibase.BufferManager.pinPage( dirent.getOriginDirectoryPage(), page_dir, false );
+        page_dir.setCurPage( dirent.getOriginDirectoryPage() );
+        page_dir.deleteRecord( dirent.getRID() );
+        Log.log( LogLevel.MORE, "%s: Deleted directory entry [%d] slotno [%d]\n", 
+                function_name, dirent.getRID().pageno.pid, dirent.getRID().slotno );
+        Minibase.BufferManager.unpinPage( dirent.getOriginDirectoryPage(), true );
+
+        /* finally, decrement the counter for the number of records */
+        decRecCount();
+    }
+
+    /*
+        1. Go through all Directory Pages.
+        2. For each Directory Page, read all the records.
+        3. If it is the first Directory Page, read the record count as well.
+    */
+    protected void readFile() {
+
+        String function_name = "readFile";
+
+        /* outer loop goes through the linked list of Directory Page Entries */
+        /* start with the root */
+        for( PageId pid = startingPID; pid.pid != -1; ) 
+        {
+            Log.log( LogLevel.MOST, "%s: reading page [%d]\n", function_name, pid.pid );
+
+            HFPage page_dir = new HFPage();
+            Minibase.BufferManager.pinPage( pid, page_dir, false );
+            page_dir.setCurPage( pid );
+
+            /* special treatment for first Directory Page */
+            RID rid = null;
+            if( pid.pid == startingPID.pid ) {
+                /* read the number of records */
+                /* this will set rid_reccount as well */
+                Log.log( LogLevel.MOST, "%s: setting record count\n", function_name );
+                readRecCount(page_dir);
+                rid = page_dir.nextRecord(rid_reccount);
+            } else {
+                rid = page_dir.firstRecord();
+            }
+
+            for( ;rid != null; rid = page_dir.nextRecord(rid) ) {
+                byte[] ba = page_dir.selectRecord(rid);
+                DirectoryEntry dirent = new DirectoryEntry(ba);
+
+                /* save the RID */
+                dirent.rid = new RID();
+                dirent.rid.copyRID(rid);
+
+                /* update in memory structures */
+                updateDirectoryEntryInMemory(dirent);
+            }
+            PageId pid_next = page_dir.getNextPage();
+            Minibase.BufferManager.unpinPage(pid, false);
+            pid = pid_next;
+        }
+        Log.log( LogLevel.MOST, "%s: Done reading file!\n", function_name );
+    }
+
     public int getRecCount()    { return reccount; }
+    PageId getStartingPID()        { return startingPID; }
 
     private int reccount;
     private RID rid_reccount;
@@ -428,7 +652,31 @@ public class HeapFile {
         - create a file entry in the DB using DiskMgr.
     */
     public HeapFile(String name) throws java.io.IOException {
+        String function_name = "HeapFile constructor";
+        Log.log(LogLevel.MOST, "%s: checking if file [%s] exists\n", function_name, name );
 
+        PageId pid = Minibase.DiskManager.get_file_entry( name );
+
+        Log.log(LogLevel.MOST, "%s: PID after get_file_entry\n", function_name );
+
+        if( pid == null || pid.pid == -1 ) {
+            createFile(name);
+        } else {
+            readFile(pid);
+        }
+    }
+
+    private void readFile(PageId pid) throws java.io.IOException {
+        String function_name = "readFile";
+        Log.log( LogLevel.MOST, "%s: reading file with PID [%d]\n", function_name, pid.pid );
+        directory = new Directory(pid);
+        directory.readFile();
+    }
+
+    private void createFile(String name) throws java.io.IOException {
+
+        String function_name = "createFile";
+        Log.log( LogLevel.MOST, "%s: creating file [%s]\n", function_name, name );
         /* create a new page for the Directory */
         HFPage page = new HFPage();
         PageId pid = Minibase.BufferManager.newPage(page, 1);
@@ -534,10 +782,11 @@ public class HeapFile {
     }
 
     public HeapScan openScan() { 
-        return null;
+        return new HeapScan(this);
     }
 
-    Directory directory;
+    protected Directory directory;
+
 };
 
 
