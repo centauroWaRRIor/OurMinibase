@@ -21,6 +21,7 @@ class HeapScan extends Object {
     protected HeapScan(HeapFile hf) {
         heapFile = hf;
         initialized = false;
+        pinnedDirectoryHeader = false;
 
         initialize();
     }
@@ -30,7 +31,13 @@ class HeapScan extends Object {
     }
 
     public void close() throws ChainException {
+        if( heapFile == null ) {
+            throw new ChainException();
+        }
+
+        String function_name = "close";
         cleanup();
+        Log.log( LogLevel.MOST, "%s: End of closing\n", function_name );
     }
 
     public boolean hasNext() {
@@ -42,16 +49,24 @@ class HeapScan extends Object {
         if( next_ridData != null ) {
             Minibase.BufferManager.unpinPage(next_ridData.pageno, false);
         }
+
         next_ridData = null;
         next_ridDirectory = null;
         next_pageData = null;
+        initialized = false;
+        pinnedDirectoryHeader = false;
+        heapFile = null;
     }
 
     public void unpinDirectoryPage() {
-        String function_name = "unpinDirectoryPage";
+        if( pinnedDirectoryHeader ) {
+            String function_name = "unpinDirectoryPage";
 
-        Log.log( LogLevel.LESS, "%s: Unpinning the Directory Page\n", function_name );
-        Minibase.BufferManager.unpinPage(heapFile.directory.getStartingPID(), false);
+            Log.log( LogLevel.LESS, "%s: Unpinning the Directory Page\n", function_name );
+            Minibase.BufferManager.unpinPage(heapFile.directory.getStartingPID(), false);
+
+            pinnedDirectoryHeader = false;
+        }
     }
 
     /*
@@ -95,7 +110,7 @@ class HeapScan extends Object {
         byte[] ba = next_pageData.selectRecord(next_ridData);
         Tuple t =  new Tuple(ba, 0, ba.length);
 
-        Log.log( LogLevel.LESS, "%s: Returning data [%s]\n", function_name, 
+        Log.log( LogLevel.VERBOSE, "%s: Returning data [%s]\n", function_name, 
                 Arrays.toString(t.getTupleByteArray()) );
 
         /* this is the part that may need some reworking */
@@ -158,10 +173,15 @@ class HeapScan extends Object {
     }
 
     public void printRIDs() {
-        Log.log( LogLevel.MOST, "Directory RID: pageno [%d] slot [%d]\n", 
-                next_ridDirectory.pageno.pid, next_ridDirectory.slotno );
-        Log.log( LogLevel.MOST, "Data RID: pageno [%d] slot [%d]\n", 
+        if( next_ridDirectory != null ) {
+            Log.log( LogLevel.MOST, "Directory RID: pageno [%d] slot [%d]\n", 
+                 next_ridDirectory.pageno.pid, next_ridDirectory.slotno );
+        }
+
+        if( next_ridData != null ) {
+            Log.log( LogLevel.MOST, "Data RID: pageno [%d] slot [%d]\n", 
                 next_ridData.pageno.pid, next_ridData.slotno );
+        }
     }
 
     /*
@@ -187,6 +207,7 @@ class HeapScan extends Object {
         Log.log( LogLevel.MOST, "%s: Opening the Directory Page\n", function_name );
         HFPage page_dir = new HFPage();
         Minibase.BufferManager.pinPage(heapFile.directory.getStartingPID(), page_dir, false);
+        this.pinnedDirectoryHeader = true;
         page_dir.setCurPage(heapFile.directory.getStartingPID());
 
         /* get the next record for the Directory */
@@ -207,11 +228,14 @@ class HeapScan extends Object {
         Log.log( LogLevel.MOST, "%s: RIDs:\n", function_name );
         printRIDs();
 
-        Log.log( LogLevel.MOST, "%s: Printing data page\n", function_name );
-        next_pageData.print();
+        if( Log.IsVerbose() ) {
+            Log.log( LogLevel.MOST, "%s: Printing data page\n", function_name );
+            next_pageData.print();
+        }
     }
 
     private boolean initialized;
+    private boolean pinnedDirectoryHeader;
     private HeapFile heapFile;
     private RID next_ridData;
     private RID next_ridDirectory;

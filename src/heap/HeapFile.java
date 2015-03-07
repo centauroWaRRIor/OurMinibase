@@ -16,12 +16,16 @@ TODO:
   Even after all the data is over, I need to hold onto one page!!
   I am keeping the Directory Page for now.
   We need to clean this up during finalize();
+- Need to use a type to identify a page to be a Directory Page
 
 
 NOTES:
 - I get an insufficient space error when there is exact space left (32 bytes VS 32 bytes)
   So I resorted to checking for strictly greater than which seems to work
-
+- We may want to think of more test cases.  For example, I had forgotten to update the free
+  space in both the in memory as well as the disk structures!
+- We may want to do some testing with the number of records, for example.
+- Current updateRecord disallows updates with different lengths than what is present currently in the DB.
 
 */
 package heap;
@@ -181,20 +185,106 @@ class ComparePIDDirectoryEntry implements Comparator<DirectoryEntry> {
 }
 
 class Directory implements global.GlobalConst {
-    public Directory(PageId pid) throws java.io.IOException {
-        startingPID = pid;
+    public Directory(String name) throws java.io.IOException {
 
+        String function_name = "Directory constructor";
+        Log.log(LogLevel.MOST, "%s: checking if file [%s] exists\n", function_name, name );
+
+        initialize();
+
+        PageId pid = Minibase.DiskManager.get_file_entry( name );
+
+        Log.log(LogLevel.MOST, "%s: PID after get_file_entry\n", function_name );
+
+        if( pid == null || pid.pid == -1 ) {
+            createFile(name);
+        } else {
+            readFile(pid);
+        }
+    }
+
+    private void initialize() throws java.io.IOException {
         /* create our tree to manage the capacity */
         page_capacity_array = new ArrayList<DirectoryEntry> ();
         page_id_tree = new TreeSet<DirectoryEntry> ( new ComparePIDDirectoryEntry() );
 
         /* remember the number of records */
         reccount = 0;
+    }
+
+    private void createFile(String name) throws java.io.IOException {
+
+        String function_name = "createFile";
+        Log.log( LogLevel.MOST, "%s: creating file [%s]\n", function_name, name );
+        /* create a new page for the Directory */
+        HFPage page = new HFPage();
+        PageId pid = Minibase.BufferManager.newPage(page, 1);
+        Minibase.BufferManager.unpinPage(pid, false);
+
+        Log.log( LogLevel.MOST, "Initializing Heapfile - allocating a new page [%d]\n", pid.pid ) ;
+
+        /* remember the startingPID */
+        startingPID = pid;
+
+        /* for now, assume it is a new file */
+        Log.log( LogLevel.MOST, "Adding file entry [%s]\n", name );
+        Minibase.DiskManager.add_file_entry(name, getStartingPID() );
 
         /* insert a zero record entry */
         insertRecCount();
     }
 
+    /*
+        1. Go through all Directory Pages.
+        2. For each Directory Page, read all the records.
+        3. If it is the first Directory Page, read the record count as well.
+    */
+    protected void readFile( PageId startingPID ) {
+
+        String function_name = "readFile";
+
+        /* remember the starting pid */
+        this.startingPID = startingPID;
+
+        /* outer loop goes through the linked list of Directory Page Entries */
+        /* start with the root */
+        for( PageId pid = startingPID; pid.pid != -1; ) 
+        {
+            Log.log( LogLevel.MOST, "%s: reading page [%d]\n", function_name, pid.pid );
+
+            HFPage page_dir = new HFPage();
+            Minibase.BufferManager.pinPage( pid, page_dir, false );
+            page_dir.setCurPage( pid );
+
+            /* special treatment for first Directory Page */
+            RID rid = null;
+            if( pid.pid == startingPID.pid ) {
+                /* read the number of records */
+                /* this will set rid_reccount as well */
+                Log.log( LogLevel.MOST, "%s: setting record count\n", function_name );
+                readRecCount(page_dir);
+                rid = page_dir.nextRecord(rid_reccount);
+            } else {
+                rid = page_dir.firstRecord();
+            }
+
+            for( ;rid != null; rid = page_dir.nextRecord(rid) ) {
+                byte[] ba = page_dir.selectRecord(rid);
+                DirectoryEntry dirent = new DirectoryEntry(ba);
+
+                /* save the RID */
+                dirent.rid = new RID();
+                dirent.rid.copyRID(rid);
+
+                /* update in memory structures */
+                updateDirectoryEntryInMemory(dirent);
+            }
+            PageId pid_next = page_dir.getNextPage();
+            Minibase.BufferManager.unpinPage(pid, false);
+            pid = pid_next;
+        }
+        Log.log( LogLevel.MOST, "%s: Done reading file!\n", function_name );
+    }
     /*
         1) Check if we can locate a page that has enough capacity.
         2) If yes, return the Directory Entry that corresponds to this page.
@@ -548,18 +638,18 @@ class Directory implements global.GlobalConst {
         1. Locate the Page with this RID in the Direcotory using the In Memory Tree.
         2. If not found - error.
         3. Remove the data from the Page first.  This may make the Page empty, but we are not cleaning it.
-        4. Then, remove the data from the Directory Page.  The Directory page is found in the Directory Entry
-           object.
+        4. Update Directory Entry with the appropriate space.
+           Note that this needs to be done for In Memory as well as the database.
         5. Decrement the number of objects and update Entry.
     */
-    public void deleteRecord( RID rid ) throws java.io.IOException {
+    public boolean deleteRecord( RID rid ) throws java.io.IOException {
         String function_name = "deleteRecord";
 
         DirectoryEntry dirent = page_id_tree.ceiling( new DirectoryEntry( rid.pageno, -1, -1 ) );
         if( dirent == null  || (dirent.getPageId().pid != rid.pageno.pid) ) {
             /* TBD - need to raise an exception */
             Log.log( LogLevel.NONE, "%s: could not find [%d] to delete\n", function_name, rid.pageno.pid );
-            return;
+            return false;
         }
 
         Log.log( LogLevel.MOST, "%s: Found the Directory Entry for RID\n", function_name  );
@@ -569,71 +659,71 @@ class Directory implements global.GlobalConst {
         Minibase.BufferManager.pinPage( rid.pageno, page_data, false );
         page_data.setCurPage(rid.pageno);
         page_data.deleteRecord( rid );
+
+        /* save the new free space */
+        dirent.setCapacity( page_data.getFreeSpace() );
+
         Minibase.BufferManager.unpinPage( rid.pageno, true );
         Log.log( LogLevel.MORE, "%s: Deleted record [%d] slotno [%d]\n", 
                 function_name, rid.pageno.pid, rid.slotno );
 
-
-        /* now delete the Directory Entry */
+        /* now update the Directory Entry with the available space */
         HFPage page_dir = new HFPage();
         Minibase.BufferManager.pinPage( dirent.getOriginDirectoryPage(), page_dir, false );
         page_dir.setCurPage( dirent.getOriginDirectoryPage() );
-        page_dir.deleteRecord( dirent.getRID() );
-        Log.log( LogLevel.MORE, "%s: Deleted directory entry [%d] slotno [%d]\n", 
-                function_name, dirent.getRID().pageno.pid, dirent.getRID().slotno );
+
+        page_dir.updateRecord( dirent.getRID(), dirent.getTuple() );
+
+        Log.log( LogLevel.MORE, "%s: Updated directory entry [%d] slotno [%d] with new freespace [%d]\n", 
+                function_name, dirent.getRID().pageno.pid, dirent.getRID().slotno, dirent.getPageCapacity() );
         Minibase.BufferManager.unpinPage( dirent.getOriginDirectoryPage(), true );
 
         /* finally, decrement the counter for the number of records */
         decRecCount();
+
+        return true;
     }
 
     /*
-        1. Go through all Directory Pages.
-        2. For each Directory Page, read all the records.
-        3. If it is the first Directory Page, read the record count as well.
+        1. Make sure this is a page we manage from the Directory.
+        2. Check if the lengths are OK and then update the record.
+        3. Nothing to update in the Directory Header or Record Count!
+
+        We are not handling record sizes that are of different sizes i.e. you cannot 
+        update a record with a different size for now.
     */
-    protected void readFile() {
+    public boolean updateRecord(RID rid, Tuple t) throws java.io.IOException {
+        String function_name = "updateRecord";
 
-        String function_name = "readFile";
-
-        /* outer loop goes through the linked list of Directory Page Entries */
-        /* start with the root */
-        for( PageId pid = startingPID; pid.pid != -1; ) 
-        {
-            Log.log( LogLevel.MOST, "%s: reading page [%d]\n", function_name, pid.pid );
-
-            HFPage page_dir = new HFPage();
-            Minibase.BufferManager.pinPage( pid, page_dir, false );
-            page_dir.setCurPage( pid );
-
-            /* special treatment for first Directory Page */
-            RID rid = null;
-            if( pid.pid == startingPID.pid ) {
-                /* read the number of records */
-                /* this will set rid_reccount as well */
-                Log.log( LogLevel.MOST, "%s: setting record count\n", function_name );
-                readRecCount(page_dir);
-                rid = page_dir.nextRecord(rid_reccount);
-            } else {
-                rid = page_dir.firstRecord();
-            }
-
-            for( ;rid != null; rid = page_dir.nextRecord(rid) ) {
-                byte[] ba = page_dir.selectRecord(rid);
-                DirectoryEntry dirent = new DirectoryEntry(ba);
-
-                /* save the RID */
-                dirent.rid = new RID();
-                dirent.rid.copyRID(rid);
-
-                /* update in memory structures */
-                updateDirectoryEntryInMemory(dirent);
-            }
-            PageId pid_next = page_dir.getNextPage();
-            Minibase.BufferManager.unpinPage(pid, false);
-            pid = pid_next;
+        DirectoryEntry dirent = page_id_tree.ceiling( new DirectoryEntry( rid.pageno, -1, -1 ) );
+        if( dirent == null  || (dirent.getPageId().pid != rid.pageno.pid) ) {
+            /* TBD - need to raise an exception */
+            Log.log( LogLevel.NONE, "%s: could not find [%d] to delete\n", function_name, rid.pageno.pid );
+            return false;
         }
-        Log.log( LogLevel.MOST, "%s: Done reading file!\n", function_name );
+
+        Log.log( LogLevel.MOST, "%s: Found the Directory Entry for RID\n", function_name  );
+
+        /* now, update the entry in the data page */
+        HFPage page_data = new HFPage();
+        Minibase.BufferManager.pinPage( rid.pageno, page_data, false );
+        page_data.setCurPage(rid.pageno);
+
+        /* check for length */
+        byte[] ba = page_data.selectRecord(rid);
+        if( ba.length != t.getLength() ) {
+            Log.log( LogLevel.NONE, "%s: different record lengths: original: [%d], new: [%d]\n",
+                    function_name, ba.length, t.getLength() );
+            return false;
+        }
+
+        page_data.updateRecord( rid, t );
+
+        Minibase.BufferManager.unpinPage( rid.pageno, true );
+        Log.log( LogLevel.MORE, "%s: Deleted record [%d] slotno [%d]\n", 
+                function_name, rid.pageno.pid, rid.slotno );
+
+        return true;
     }
 
     public int getRecCount()    { return reccount; }
@@ -646,7 +736,7 @@ class Directory implements global.GlobalConst {
     private ArrayList<DirectoryEntry> page_capacity_array;
 }
 
-public class HeapFile {
+public class HeapFile implements global.GlobalConst {
     /*
         - create a PageId object for page 0 - this is our Directory Page
         - create a file entry in the DB using DiskMgr.
@@ -655,41 +745,7 @@ public class HeapFile {
         String function_name = "HeapFile constructor";
         Log.log(LogLevel.MOST, "%s: checking if file [%s] exists\n", function_name, name );
 
-        PageId pid = Minibase.DiskManager.get_file_entry( name );
-
-        Log.log(LogLevel.MOST, "%s: PID after get_file_entry\n", function_name );
-
-        if( pid == null || pid.pid == -1 ) {
-            createFile(name);
-        } else {
-            readFile(pid);
-        }
-    }
-
-    private void readFile(PageId pid) throws java.io.IOException {
-        String function_name = "readFile";
-        Log.log( LogLevel.MOST, "%s: reading file with PID [%d]\n", function_name, pid.pid );
-        directory = new Directory(pid);
-        directory.readFile();
-    }
-
-    private void createFile(String name) throws java.io.IOException {
-
-        String function_name = "createFile";
-        Log.log( LogLevel.MOST, "%s: creating file [%s]\n", function_name, name );
-        /* create a new page for the Directory */
-        HFPage page = new HFPage();
-        PageId pid = Minibase.BufferManager.newPage(page, 1);
-        Minibase.BufferManager.unpinPage(pid, false);
-
-        Log.log( LogLevel.MOST, "Initializing Heapfile - allocating a new page [%d]\n", pid.pid ) ;
-
-        directory = new Directory( pid );
-
-        /* for now, assume it is a new file */
-        Log.log( LogLevel.MOST, "Adding file entry [%s]\n", name );
-        Minibase.DiskManager.add_file_entry(name, directory.getStartingPID() );
-
+        directory = new Directory(name);
     }
 
     /*
@@ -701,7 +757,14 @@ public class HeapFile {
     public RID insertRecord(byte[] record) throws ChainException, java.io.IOException {
 
         String function_name = "insertRecord";
-        Log.log( LogLevel.MOST, "%s: looking for Directory Entry with capacity [%d]\n", function_name, record.length );
+        Log.log( LogLevel.MOST, "%s: looking for Directory Entry with capacity [%d]\n", 
+                    function_name, record.length );
+
+        /* check for the length of the record */
+        if( record.length > MAX_TUPSIZE ) {
+            throw new SpaceNotAvailableException( "insertRecord - Tuple too big." );
+            //throw new HeapFileException(null, "hey");
+        }
 
         /* get the DirectoryEntry that points to the page we want */
         DirectoryEntry dirent = directory.getDirectoryEntryWithCapacity( record.length );
@@ -758,11 +821,34 @@ public class HeapFile {
     }
 
     public boolean updateRecord(RID rid, Tuple newRecord) throws ChainException {
-        return false;
+        String function_name = "updateRecord";
+
+        Log.log( LogLevel.MOST, "%s: updating RID pageno [%d] slotno [%d]\n", 
+                function_name, rid.pageno.pid, rid.slotno );
+
+        boolean success = false;
+        try {
+            success = directory.updateRecord(rid, newRecord);
+        } catch( java.io.IOException e ) {
+            throw(new ChainException(e, "Error updating record." ));
+        }
+
+        return success;
     }
 
-    public boolean deleteRecord(RID rid) {
-        return false;
+    public boolean deleteRecord(RID rid) throws ChainException {
+        String function_name = "deleteRecord";
+
+        Log.log( LogLevel.MOST, "%s: Deleting RID pid [%d] slotno [%d]\n", 
+                function_name, rid.pageno.pid, rid.slotno );
+        boolean success = false;
+        try {
+            success = directory.deleteRecord(rid);
+        } catch( java.io.IOException e) {
+            throw new HeapFileException(e, "Delete Record Failed." );
+        }
+
+        return success;
     }
 
     /*

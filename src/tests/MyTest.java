@@ -29,9 +29,9 @@ class MyTestDriver extends TestDriver implements GlobalConst
 	public MyTestDriver () {
 		super("hptest");
         //choice = 1;             // baby steps
-		// choice = 100;      // big enough for file to occupy > 1 data page
-		choice = 2000;   // big enough for file to occupy > 1 directory page
-		//choice = 2;
+		//choice = 100;      // big enough for file to occupy > 1 data page
+		//choice = 2000;   // big enough for file to occupy > 1 directory page
+		  choice = 2;
 	}
 
 
@@ -338,12 +338,16 @@ class MyTestDriver extends TestDriver implements GlobalConst
 			}
 		}
 
+
 		try {
 			scan.close();
 		} catch (ChainException e1) {
 			// TODO Auto-generated catch block
-			e1.printStackTrace();
+			e1.printStackTrace(); 
 		}	//  destruct scan!!!!!!!!!!!!!!!
+
+
+
 		scan = null;
 
 		if ( status == OK && Minibase.BufferManager.getNumUnpinned() 
@@ -842,7 +846,6 @@ class MyTestDriver extends TestDriver implements GlobalConst
 			}
 		}
 
-/*
 		// In general, a sequential scan won't be in the same order as the
 		// insertions.  However, we're inserting fixed-length records here, and
 		// in this case the scan must return the insertion order.
@@ -949,7 +952,6 @@ class MyTestDriver extends TestDriver implements GlobalConst
 			}	
 		}
 
-*/
 
 		if ( status == OK )
 			System.out.println ("  Test 1 completed successfully.\n");
@@ -961,14 +963,12 @@ class MyTestDriver extends TestDriver implements GlobalConst
 
 		boolean _passAll = OK;
 
-        /*
 		if (!test1()) { _passAll = FAIL; }
 		if (!test2()) { _passAll = FAIL; }
 		if (!test3()) { _passAll = FAIL; }
 		if (!test4()) { _passAll = FAIL; }
 		if (!test5()) { _passAll = FAIL; }
-        */
-		if (!test6()) { _passAll = FAIL; }
+		/* if (!test6()) { _passAll = FAIL; } */
 
 		return _passAll;
 	}
