@@ -6,7 +6,7 @@ BINPATH = $(JDKPATH)/bin
 JAVAC = $(JDKPATH)/bin/javac 
 JAVA  = $(JDKPATH)/bin/java 
 
-PROGS = mine
+PROGS = xx
 
 all: $(PROGS)
 
@@ -15,9 +15,6 @@ compile:src/*/*.java
 
 xx : compile
 	$(JAVA) -cp $(CLASSPATH):bin tests.HFTest
-
-mine : compile
-	$(JAVA) -cp $(CLASSPATH):bin tests.MyTest
 
 clean:
 	$(RM) -r bin/heap bin/tests
