@@ -2,7 +2,7 @@
 TODO:
 
 - In memory structure for checking capacity of pages
-- Saving and re-running: is thie required??
+- Saving and re-running: is this required??
 - Exceptions
 - Update and Delete
 - HeapScan: DONE
@@ -30,13 +30,14 @@ NOTES:
 */
 package heap;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.Comparator;;
+import java.util.Comparator;
 
 import global.RID;
 import global.Minibase;
-import global.Page;
 import global.PageId;
 import global.Convert;
 import global.GlobalConst;
@@ -54,7 +55,7 @@ enum LogLevel {
 
 class Log
 {
-    static LogLevel current = LogLevel.MOST;
+    static LogLevel current = LogLevel.NONE;
 
     public static boolean IsVerbose() { return current == LogLevel.VERBOSE ? true : false; }
 
@@ -170,15 +171,7 @@ class RecCountEntry {
     private byte[] data;
 };
 
-class CompareSizeDirectoryEntry implements Comparator<DirectoryEntry> {
-    @Override 
-    public int compare(DirectoryEntry dirent1, DirectoryEntry dirent2) {
-        return( dirent1.getPageCapacity() - dirent2.getPageCapacity() );
-    }
-}
-
 class ComparePIDDirectoryEntry implements Comparator<DirectoryEntry> {
-    @Override 
     public int compare(DirectoryEntry dirent1, DirectoryEntry dirent2) {
         return( dirent1.getPageId().pid - dirent2.getPageId().pid );
     }
@@ -205,7 +198,7 @@ class Directory implements global.GlobalConst {
 
     private void initialize() throws java.io.IOException {
         /* create our tree to manage the capacity */
-        page_capacity_array = new ArrayList<DirectoryEntry> ();
+        page_capacity_tree = new TreeMap<Integer, LinkedList<DirectoryEntry>>();
         page_id_tree = new TreeSet<DirectoryEntry> ( new ComparePIDDirectoryEntry() );
 
         /* remember the number of records */
@@ -415,52 +408,70 @@ class Directory implements global.GlobalConst {
         return newPage;
     }
 
-    public void addDirectoryEntryToInMemory(DirectoryEntry dirent) { 
-        System.out.println( "Not used - error" );
-    }
-
     public void updateDirectoryEntryInMemory(DirectoryEntry dirent) { 
-        /* add in both the trees */
+        /* add in page id tree */
         page_id_tree.add(dirent);
-        page_capacity_array.add(dirent);
+        /* add in page capacity tree */
+        Map.Entry<Integer, LinkedList<DirectoryEntry>> entry;
+        entry = page_capacity_tree.ceilingEntry(dirent.getPageCapacity());
+        LinkedList<DirectoryEntry> list = null;
+        if(entry != null && 
+           entry.getKey() == dirent.getPageCapacity()) {
+          /* If there is already an entry with the same page capacity key in the 
+           * tree, then append to exiting linked list value. Note that a Linked List
+           * is as this TreeMap value because TreeMaps don't allow repetitions. 
+           * Also note that Addition and search are still O(log n) because 
+           * insertion/addition to the head of a list is O(1)
+           */
+           list = entry.getValue();
+           list.addFirst(dirent);
+        }
+        else {
+        	/* If there is no entry in the tree with this exact capacity key then
+        	 * create a new K,V entry for future insertions with this same
+        	 * capacity key.
+        	 */
+        	list = new LinkedList<DirectoryEntry>();
+        	list.add(dirent);
+        	page_capacity_tree.put(dirent.getPageCapacity(), new LinkedList<DirectoryEntry>(list));
+        }
     }
 
     /*
-        Linear performance now.
-        Needs to be optimized
-    */
+     * O(log n) for searching the tree plus O(1) for removing from head of list
+     * equals O(log n) performance.
+     */
     public DirectoryEntry getFirstGreaterThan(int capacity) {
         String function_name = "getFirstGreaterThan";
         Log.log( LogLevel.MOST, "%s: Number of Directory Entries [%d]\n", 
-                function_name, page_capacity_array.size() );
+                function_name, page_capacity_tree.size() );
 
-        int found_index = -1;
-        int found_capacity = Integer.MAX_VALUE;
-        DirectoryEntry dirent = null;
-        for( int i = 0; i < page_capacity_array.size(); i++ ) {
-            dirent = page_capacity_array.get(i);
-
-            Log.log( LogLevel.VERBOSE, "%s: Page Capacity [%d] Looking for Capacity [%d]\n", 
-                    function_name, dirent.getPageCapacity(), capacity );
-
-            if( dirent.getPageCapacity() > capacity ) {
-                if( dirent.getPageCapacity() < found_capacity ) {
-                    found_index = i;
-                    found_capacity = dirent.getPageCapacity();
-                }
+        DirectoryEntry resultDirent = null;
+        Map.Entry<Integer, LinkedList<DirectoryEntry>> entry;
+        entry = page_capacity_tree.ceilingEntry(capacity);
+        /* Check if such key was found in the tree.
+         * Important Note: CeilingEntry returns an entry
+         * that is greater or equal to the key (capacity). 
+         * However, we want to restrict the search to strictly 
+         * greater because we need to account for the space needed 
+         * for storing not only the record but also the RID
+         * in the heap page (4 extra bytes).        
+         */
+        if(entry != null && entry.getKey() > capacity ) {
+            LinkedList<DirectoryEntry> list = entry.getValue();
+            resultDirent = list.removeFirst();
+            /* Remove key from tree if this was the only value 
+             * in the linked list.
+             */
+            if(list.isEmpty()) {
+            	page_capacity_tree.remove(entry.getKey());
             }
+            /* to be consistent, we will remove it from the page_id_tree as well */
+            page_id_tree.remove(resultDirent);
+            return resultDirent;
         }
-
-        if( found_index >= 0 ) { 
-            page_capacity_array.remove(found_index);
-
-            /* to be consistent, we will remove it from the page_id_set as well */
-            page_id_tree.remove(dirent);
-
-            return dirent;
-        }
-
-        return null;
+        else 
+        	return null;
     }
 
     /*
@@ -635,7 +646,7 @@ class Directory implements global.GlobalConst {
     }
 
     /*
-        1. Locate the Page with this RID in the Direcotory using the In Memory Tree.
+        1. Locate the Page with this RID in the Directory using the In Memory Tree.
         2. If not found - error.
         3. Remove the data from the Page first.  This may make the Page empty, but we are not cleaning it.
         4. Update Directory Entry with the appropriate space.
@@ -692,14 +703,15 @@ class Directory implements global.GlobalConst {
         We are not handling record sizes that are of different sizes i.e. you cannot 
         update a record with a different size for now.
     */
-    public boolean updateRecord(RID rid, Tuple t) throws java.io.IOException {
+    public void updateRecord(RID rid, Tuple t)
+    		throws InvalidUpdateException {
         String function_name = "updateRecord";
 
         DirectoryEntry dirent = page_id_tree.ceiling( new DirectoryEntry( rid.pageno, -1, -1 ) );
         if( dirent == null  || (dirent.getPageId().pid != rid.pageno.pid) ) {
             /* TBD - need to raise an exception */
             Log.log( LogLevel.NONE, "%s: could not find [%d] to delete\n", function_name, rid.pageno.pid );
-            return false;
+            throw new InvalidUpdateException(null, new String("Could not find" + rid.pageno.pid));
         }
 
         Log.log( LogLevel.MOST, "%s: Found the Directory Entry for RID\n", function_name  );
@@ -714,7 +726,9 @@ class Directory implements global.GlobalConst {
         if( ba.length != t.getLength() ) {
             Log.log( LogLevel.NONE, "%s: different record lengths: original: [%d], new: [%d]\n",
                     function_name, ba.length, t.getLength() );
-            return false;
+            throw new InvalidUpdateException(null, new String("different record lengths: original: " + 
+            		ba.length + ", new: " + t.getLength()));
+            
         }
 
         page_data.updateRecord( rid, t );
@@ -722,8 +736,6 @@ class Directory implements global.GlobalConst {
         Minibase.BufferManager.unpinPage( rid.pageno, true );
         Log.log( LogLevel.MORE, "%s: Deleted record [%d] slotno [%d]\n", 
                 function_name, rid.pageno.pid, rid.slotno );
-
-        return true;
     }
 
     public int getRecCount()    { return reccount; }
@@ -733,7 +745,7 @@ class Directory implements global.GlobalConst {
     private RID rid_reccount;
     private PageId startingPID;
     private TreeSet<DirectoryEntry> page_id_tree;
-    private ArrayList<DirectoryEntry> page_capacity_array;
+    private TreeMap<Integer, LinkedList<DirectoryEntry>> page_capacity_tree;
 }
 
 public class HeapFile implements global.GlobalConst {
@@ -793,7 +805,6 @@ public class HeapFile implements global.GlobalConst {
         Log.log( LogLevel.MOST, "%s: Setting new capacity in Directory Entry [%d]\n", 
                         function_name, page_data.getFreeSpace() );
         dirent.setCapacity( page_data.getFreeSpace() );
-        /* dirent.numRecords = hfp_data.... */
 
         if( Log.IsVerbose() ) {
             Log.log( LogLevel.VERBOSE, "%s: Printing the data page\n", function_name );
@@ -828,9 +839,10 @@ public class HeapFile implements global.GlobalConst {
 
         boolean success = false;
         try {
-            success = directory.updateRecord(rid, newRecord);
-        } catch( java.io.IOException e ) {
-            throw(new ChainException(e, "Error updating record." ));
+            directory.updateRecord(rid, newRecord);
+            success = true;
+        } catch( InvalidUpdateException e ) {
+            throw(new InvalidUpdateException(e, "Error updating record." ));
         }
 
         return success;
@@ -859,7 +871,7 @@ public class HeapFile implements global.GlobalConst {
         if( !directory.doesPageIDExist(rid.pageno) ) 
             return null;
 
-        HFPage page_data = new HFPage();;
+        HFPage page_data = new HFPage();
         Minibase.BufferManager.pinPage( rid.pageno, page_data, false ); 
         byte[] byteArray = page_data.selectRecord(rid);
         Minibase.BufferManager.unpinPage( rid.pageno, false );
@@ -874,5 +886,4 @@ public class HeapFile implements global.GlobalConst {
     protected Directory directory;
 
 };
-
 

@@ -1,24 +1,16 @@
 package heap;
 
 import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.TreeSet;
-import java.util.Comparator;;
-
 import global.RID;
 import global.Minibase;
-import global.Page;
 import global.PageId;
-import global.Convert;
-import global.GlobalConst;
-
 import heap.Tuple;
 import heap.HFPage;
 
 import chainexception.ChainException;
 
-class HeapScan extends Object {
-    protected HeapScan(HeapFile hf) {
+public class HeapScan {
+    public HeapScan(HeapFile hf) {
         heapFile = hf;
         initialized = false;
         pinnedDirectoryHeader = false;
@@ -32,7 +24,8 @@ class HeapScan extends Object {
 
     public void close() throws ChainException {
         if( heapFile == null ) {
-            throw new ChainException();
+            throw new ChainException(null, 
+            		"Attempt to close a heap scan without calling clean first");
         }
 
         String function_name = "close";
@@ -240,6 +233,5 @@ class HeapScan extends Object {
     private RID next_ridData;
     private RID next_ridDirectory;
     private HFPage next_pageData;
-    //private PageId pidDirectory;
 };
 
