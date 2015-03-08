@@ -9,17 +9,14 @@ public class LIRS {
     private LinkedList<LIRS_Stats> unpinnedList;
     private LinkedList<LIRS_Stats> pinnedList;
     private Integer globalCount; // Gets incremented every time a page gets accessed
-	//private LIRS_Pair victim;
 	
 	public LIRS(Integer numbufs) {
 		
 	   unpinnedList = new LinkedList<LIRS_Stats>();
 	   pinnedList = new LinkedList<LIRS_Stats>();
 	   globalCount = 0;
-	   //victim = null;
        // Add all the pages initially to the free pages list
        for(int i = 0; i < numbufs; i++) {
-    	  //freeList.add(new Pair(-1, i));
     	   LIRS_Stats tmpEntry = new LIRS_Stats(new Pair(-1, i));
     	   unpinnedList.add(tmpEntry);
        }
@@ -30,23 +27,11 @@ public class LIRS {
 	 */
 	public Pair getReplacementCandidate(PageId targetPage)
 			throws LIRSFailureException {
-//		Pair returnCandidate = null;
-//		Boolean status = false;
 		LIRS_Stats victim = null;
 		Integer oldpid;
 		int candidateIndex;
 		// Look under unpinned list only
 		if(!unpinnedList.isEmpty()) {
-//			returnCandidate = freeList.removeFirst();
-//			oldpid = returnCandidate.getPageId().pid;
-//			// Track this candidate using LIRS and the new target pid
-//			returnCandidate.setPageId(targetPage.pid);
-//			LIRS_Pair tmpLIRSEntry = new LIRS_Pair(returnCandidate);
-//			// Start tracking this page with the LIRS algorithm
-//			status = candidateList.add(tmpLIRSEntry);
-//			// Return the old pid so that the pair entry can be
-//			// removed from the hash table
-//			returnCandidate.setPageId(oldpid);
 			
 		   candidateIndex = computeStats(); // Updates Stats for all candidates being tracked by LIRS
 		   victim = unpinnedList.remove(candidateIndex);
@@ -83,14 +68,6 @@ public class LIRS {
 	
 	public void insertFreeListEntry (Pair entry)
 			throws LIRSFailureException {
-//		// Remove from list of candidates being tracked by LIRS
-//		LIRS_Stats tempEntry = new LIRS_Stats(entry);
-//	    candidateList.remove(tempEntry); // May or may not being tracked by LIRS
-//	    // Now add to list of free pages
-////	    Boolean status = freeList.add(entry);
-////		if(!status)
-////			throw new LIRSFailureException(null, "LIRS Failed to insert into free list");
-//	    freeList.addLast(entry);
 		Boolean status = false;
 		LIRS_Stats tmpTransferEntry = new LIRS_Stats(entry);
 		int index = pinnedList.indexOf(tmpTransferEntry);
@@ -150,7 +127,9 @@ public class LIRS {
 	}
 	
 	private void incGlobalCount() {
-		globalCount++; // TODO: Add wrapping around when spilled	
+		if(globalCount == Integer.MAX_VALUE)
+			globalCount = 0;
+		globalCount++;	
 	}
 	
 	private class LIRS_Stats {

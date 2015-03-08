@@ -1,11 +1,7 @@
 package bufmgr;
 
-import java.io.IOException;
-
 import chainexception.ChainException;
 import diskmgr.DiskMgrException;
-import diskmgr.FileIOException;
-import diskmgr.InvalidPageNumberException;
 import global.Page;
 import global.PageId;
 
@@ -88,10 +84,14 @@ public class BufMgr {
 	              flushPage(frames[replacementIndex].getPageId());
 	              frames[replacementIndex].setIsFrameDirty(false);
 	           }
-	        
-	           // Bring in page from disk into this frame
-		       Minibase.DiskManager.read_page(pageno, 
-		    		                frames[replacementIndex].getPage());
+	           
+	           try { 
+	              // Bring in page from disk into this frame
+		          Minibase.DiskManager.read_page(pageno, 
+		    		                             frames[replacementIndex].getPage());
+	           } catch (ChainException diskMgrExc) {
+	        	   throw new ChainException(diskMgrExc, "DiskManager Failed during pinPage");
+	           }
 		       
 				/* Need to remove this entry from the hash table.
 				 * Exception only applies when the this is the 
@@ -275,6 +275,7 @@ public class BufMgr {
 		   Integer frameIndex = bufferPageInfo.getFrameNumber(); 
 		   Frame frame = frames[frameIndex];
 		   Minibase.DiskManager.write_page(frame.getPageId(), frame.getPage());
+           frame.setIsFrameDirty(false);
 		} catch (HashEntryNotFoundException e) {
 			throw new HashEntryNotFoundException(e, "Page to flush not found in buffer pool");
 		} catch (Exception e) {
