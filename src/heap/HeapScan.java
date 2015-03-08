@@ -79,7 +79,7 @@ public class HeapScan {
         // get the data and move the pointer:
         if( next_ridData == null ) {
             // we should raise an exception here.
-            Log.log( LogLevel.NONE, "%s:next_ridData is null - there is no next data...\n", function_name );
+            Log.log( LogLevel.MOST, "%s:next_ridData is null - there is no next data...\n", function_name );
 
             // this is a bit of a kludge: :-( 
             unpinDirectoryPage();
@@ -87,7 +87,7 @@ public class HeapScan {
         }
 
         if( next_pageData == null ) {
-            Log.log( LogLevel.NONE, "%s:next_pageData is null - there is no next data...\n", function_name );
+            Log.log( LogLevel.MOST, "%s:next_pageData is null - there is no next data...\n", function_name );
             // this is a bit of a kludge: :-( 
             unpinDirectoryPage();
             return null;
@@ -213,7 +213,7 @@ public class HeapScan {
         }
         else {
             /* we are done */
-            Log.log( LogLevel.NONE, "%s: cannot find first record in Directory!\n", function_name );
+            Log.log( LogLevel.MOST, "%s: cannot find first record in Directory!\n", function_name );
         }
 
         // Minibase.BufferManager.unpinPage(heapFile.directory.getStartingPID(), false);

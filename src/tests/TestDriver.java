@@ -1,10 +1,8 @@
-package heap;
+package tests;
 import global.GlobalConst;
 import global.Minibase;
 
 import java.io.*;
-import java.util.*;
-import java.lang.*;
 import chainexception.*;
 
 //    Major Changes:
@@ -218,7 +216,6 @@ public class TestDriver implements GlobalConst {
    */
   protected void create_minibase() {
     System.out.println("Creating database...\nReplacer: " + "CLOCK"); //CLOCK replacement policy
-    System.out.printf("dbpath %s\n", dbpath);
     new Minibase(dbpath, DB_SIZE, BUF_SIZE, LAH_SIZE, "CLOCK", false);
   }
   

@@ -47,25 +47,6 @@ import heap.HFPage;
 
 import chainexception.ChainException;
 
-enum LogLevel {
-     VERBOSE(0), MOST(1), MORE(2), LESS(3), NONE(4);
-     private int level;
-     LogLevel(int level) { this.level = level; }
-}
-
-class Log
-{
-    static LogLevel current = LogLevel.NONE;
-
-    public static boolean IsVerbose() { return current == LogLevel.VERBOSE ? true : false; }
-
-    public static void log(LogLevel level, String format, Object...args) {
-        if( level.ordinal() >= Log.current.ordinal() ) {
-            System.out.printf(format, args);
-        }
-    }
-}
-
 class HeapFileUtil implements GlobalConst {
 
     static void printNumPinnedPages(String s) {
@@ -90,7 +71,7 @@ class DirectoryEntry {
         String function_name = "DirectoryEntry(byte[] ba)";
         this.data = ba;
         if( ba.length != getRecSize() ) {
-            Log.log( LogLevel.NONE, "%s: incorrect length for Byte Array; expected [%d] received [%d]\n",
+            Log.log( LogLevel.MOST, "%s: incorrect length for Byte Array; expected [%d] received [%d]\n",
                     function_name, getRecSize(), ba.length );
             /* TBD - need to raise an exception */
         }
@@ -147,7 +128,7 @@ class RecCountEntry {
 
         if( ba.length != getRecSize() ) {
             /* throw an exception */
-            Log.log( LogLevel.NONE, "%s: expected length [%d] received [%d]\n", 
+            Log.log( LogLevel.MOST, "%s: expected length [%d] received [%d]\n", 
                 function_name, getRecSize(), ba.length );
         }
         data = ba;
@@ -551,7 +532,7 @@ class Directory implements global.GlobalConst {
         this.rid_reccount = page_dir.firstRecord();
         if( rid_reccount == null ) {
             /* TBD - throw an exception */
-            Log.log( LogLevel.NONE, "%s: got a NULL record count record!\n" );
+            Log.log( LogLevel.MOST, "%s: got a NULL record count record!\n" );
             return;
         }
 
@@ -659,7 +640,7 @@ class Directory implements global.GlobalConst {
         DirectoryEntry dirent = page_id_tree.ceiling( new DirectoryEntry( rid.pageno, -1, -1 ) );
         if( dirent == null  || (dirent.getPageId().pid != rid.pageno.pid) ) {
             /* TBD - need to raise an exception */
-            Log.log( LogLevel.NONE, "%s: could not find [%d] to delete\n", function_name, rid.pageno.pid );
+            Log.log( LogLevel.MOST, "%s: could not find [%d] to delete\n", function_name, rid.pageno.pid );
             return false;
         }
 
@@ -710,7 +691,7 @@ class Directory implements global.GlobalConst {
         DirectoryEntry dirent = page_id_tree.ceiling( new DirectoryEntry( rid.pageno, -1, -1 ) );
         if( dirent == null  || (dirent.getPageId().pid != rid.pageno.pid) ) {
             /* TBD - need to raise an exception */
-            Log.log( LogLevel.NONE, "%s: could not find [%d] to delete\n", function_name, rid.pageno.pid );
+            Log.log( LogLevel.MOST, "%s: could not find [%d] to delete\n", function_name, rid.pageno.pid );
             throw new InvalidUpdateException(null, new String("Could not find" + rid.pageno.pid));
         }
 
@@ -724,7 +705,7 @@ class Directory implements global.GlobalConst {
         /* check for length */
         byte[] ba = page_data.selectRecord(rid);
         if( ba.length != t.getLength() ) {
-            Log.log( LogLevel.NONE, "%s: different record lengths: original: [%d], new: [%d]\n",
+            Log.log( LogLevel.MOST, "%s: different record lengths: original: [%d], new: [%d]\n",
                     function_name, ba.length, t.getLength() );
             throw new InvalidUpdateException(null, new String("different record lengths: original: " + 
             		ba.length + ", new: " + t.getLength()));
@@ -793,7 +774,7 @@ public class HeapFile implements global.GlobalConst {
         RID rid =  page_data.insertRecord(record);
         if( rid == null ) 
         {
-            Log.log( LogLevel.NONE, "Error inserting record!\n" );
+            Log.log( LogLevel.MOST, "Error inserting record!\n" );
             Minibase.BufferManager.unpinPage( dirent.getPageId(), true );
             return null;
         } else {
