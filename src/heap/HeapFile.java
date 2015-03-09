@@ -692,7 +692,7 @@ class Directory implements global.GlobalConst {
         if( dirent == null  || (dirent.getPageId().pid != rid.pageno.pid) ) {
             /* TBD - need to raise an exception */
             Log.log( LogLevel.MOST, "%s: could not find [%d] to delete\n", function_name, rid.pageno.pid );
-            throw new InvalidUpdateException(null, new String("Could not find" + rid.pageno.pid));
+            throw new InvalidUpdateException();
         }
 
         Log.log( LogLevel.MOST, "%s: Found the Directory Entry for RID\n", function_name  );
@@ -707,9 +707,7 @@ class Directory implements global.GlobalConst {
         if( ba.length != t.getLength() ) {
             Log.log( LogLevel.MOST, "%s: different record lengths: original: [%d], new: [%d]\n",
                     function_name, ba.length, t.getLength() );
-            throw new InvalidUpdateException(null, new String("different record lengths: original: " + 
-            		ba.length + ", new: " + t.getLength()));
-            
+            throw new InvalidUpdateException();
         }
 
         page_data.updateRecord( rid, t );
@@ -823,7 +821,7 @@ public class HeapFile implements global.GlobalConst {
             directory.updateRecord(rid, newRecord);
             success = true;
         } catch( InvalidUpdateException e ) {
-            throw(new InvalidUpdateException(e, "Error updating record." ));
+            throw(new InvalidUpdateException());
         }
 
         return success;
