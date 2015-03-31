@@ -1,248 +1,179 @@
 package tests;
+
 import global.GlobalConst;
 import global.Minibase;
 
-import java.io.IOException;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Random;
 
-import chainexception.ChainException;
-
-//    Major Changes:
-//    1. Change the return type of test() functions from 'int' to 'boolean'
-//       to avoid defining static int TRUE/FALSE, which makes it easier for
-//       derived functions to return the right type.
-//    2. Function runTest is not implemented to avoid dealing with function
-//       pointers.  Instead, it's flattened in runAllTests() function.
-//    3. Change
-//          Status TestDriver::runTests()
-//     	    Status TestDriver::runAllTests()
-//       to
-//          public boolean runTests();
-//          protected boolean runAllTests();
-
-/** 
- * TestDriver class is a base class for various test driver
- * objects.
- * <br>
- * Note that the code written so far is very machine dependent.  It assumes
- * the users are on UNIX system.  For example, in function runTests, a UNIX
- * command is called to clean up the working directories.
- * 
+/**
+ * <h3>Minibase Test Driver</h3>
+ * This base class contains common code to each layer's test suite.
  */
+class TestDriver implements GlobalConst {
 
-public class TestDriver implements GlobalConst{
+  /** Success value, for readability. */
+  protected static final boolean PASS = true;
 
-  public final static boolean OK   = true; 
-  public final static boolean FAIL = false; 
-  
+  /** Failure value, for readability. */
+  protected static final boolean FAIL = false;
+
+  // --------------------------------------------------------------------------
+
+  /** Default database file name. */
+  protected String DB_PATH = System.getProperty("user.name") + ".minibase";
+
   /** Default database size (in pages). */
   protected int DB_SIZE = 10000;
 
   /** Default buffer pool size (in pages) */
   protected int BUF_SIZE = 100;
-  
-  /** Default number of pages to be looked ahead */
-  protected int LAH_SIZE = 10;
 
-  protected String dbpath;  
-  protected String logpath;
-  
+  /** Default buffer pool replacement policy */
+  protected String BUF_POLICY = "Clock";
 
-  /** 
-   * TestDriver Constructor 
-   *
-   * @param nameRoot The name of the test being run
-   */
+  // --------------------------------------------------------------------------
 
-  protected TestDriver (String nameRoot) {
-
-  //  sprintf( dbpath, MINIBASE_DB, nameRoot, getpid() );
-  //  sprintf( logpath, MINIBASE_LOG, nameRoot, getpid() );
-
-    //NOTE: Assign random numbers to the dbpath doesn't work because
-    //we can never open the same database again if everytime we are
-    //given a different number.  
-
-    //To port it to a different platform, get "user.name" should
-    //still work well because this feature is not meant to be UNIX
-    //dependent. 
-    dbpath = "/tmp/"+nameRoot+System.getProperty("user.name")+".minibase-db"; 
-    logpath = "/tmp/"+nameRoot +System.getProperty("user.name")+".minibase-log"; 
-  }
+  /** Random generator; use the same seed to make tests deterministic. */
+  protected Random random;
 
   /**
-   * Another Constructor
+   * Counter values saved with a particular description.
    */
+  protected class CountData {
 
-  protected TestDriver () {}
+    public String desc;
 
-  /** 
-   * @return whether the test has completely successfully 
-   */
-  protected boolean test1 () { return true; }
-  
-  /** 
-   * @return whether the test has completely successfully 
-   */
-  protected boolean test2 () { return true; }
+    public int reads;
 
-  /** 
-   * @return whether the test has completely successfully 
-   */
-  protected boolean test3 () { return true; }
+    public int writes;
 
-  /** 
-   * @return whether the test has completely successfully 
-   */
-  protected boolean test4 () { return true; }
+    public int allocs;
 
-  /** 
-   * @return whether the test has completely successfully 
-   */
-  protected boolean test5 () { return true; }
+    public int pinned;
 
-  /** 
-   * @return whether the test has completely successfully 
-   */
-  protected boolean test6 () { return true; }
-
-  /** 
-   * @return <code>String</code> object which contains the name of the test
-   */
-  protected String testName() { 
-
-    //A little reminder to subclassers 
-    return "*** unknown ***"; 
-
-  }
+  } // protected class CountData
 
   /**
-   * This function does the preparation/cleaning work for the
-   * running tests.
-   *
-   * @return a boolean value indicates whether ALL the tests have passed
+   * Incremental history of the performance counters; odd elements are snapshots
+   * before the tests, and even elements are after.
    */
-  public boolean runTests ()  {
-    
-    System.out.println ("\n" + "Running " + testName() + " tests...." + "\n");
-    
-    // Kill anything that might be hanging around
-    String newdbpath;
-    String newlogpath;
-    String remove_logcmd;
-    String remove_dbcmd;
-    String remove_cmd = "/bin/rm -rf ";
+  protected ArrayList<CountData> counts;
 
-    newdbpath = dbpath;
-    newlogpath = logpath;
+  // --------------------------------------------------------------------------
 
-    remove_logcmd = remove_cmd + logpath;
-    remove_dbcmd = remove_cmd + dbpath;
-
-    // Commands here is very machine dependent.  We assume
-    // user are on UNIX system here
-    try {
-      Runtime.getRuntime().exec(remove_logcmd);
-      Runtime.getRuntime().exec(remove_dbcmd);
-    } 
-    catch (IOException e) {
-      System.err.println (""+e);
-    }
-    
-    remove_logcmd = remove_cmd + newlogpath;
-    remove_dbcmd = remove_cmd + newdbpath;
-
-    //This step seems redundant for me.  But it's in the original
-    //C++ code.  So I am keeping it as of now, just in case I
-    //I missed something
-    try {
-      Runtime.getRuntime().exec(remove_logcmd);
-      Runtime.getRuntime().exec(remove_dbcmd);
-    } 
-    catch (IOException e) {
-      System.err.println (""+e);
-    }
-
-    //Run the tests. Return type different from C++
-    boolean _pass = runAllTests();
-
-    //Clean up again
-    try {
-      Runtime.getRuntime().exec(remove_logcmd);
-      Runtime.getRuntime().exec(remove_dbcmd);
-    } 
-    catch (IOException e) {
-      System.err.println (""+e);
-    }
-    
-    System.out.println ("\n" + "..." + testName() + " tests ");
-    System.out.print (_pass==OK ? "completely successfully" : "failed");
-    System.out.println (".\n\n");
-    
-    return _pass;
+  /**
+   * Deletes the database files from the disk.
+   */
+  protected void delete_minibase() {
+    new File(DB_PATH).delete();
   }
 
-  protected boolean runAllTests() {
-
-    boolean _passAll = OK;
-
-    //The following code checks whether appropriate erros have been logged,
-    //which, if implemented, should be done for each test case.  
-
-    //minibase_errors.clear_errors();
-    //int result = test();
-    //if ( !result || minibase_errors.error() ) {
-    //  status = FAIL;
-    //  if ( minibase_errors.error() )
-    //    cerr << (result? "*** Unexpected error(s) logged, test failed:\n"
-    //    : "Errors logged:\n");
-    //    minibase_errors.show_errors(cerr);
-    //}
-    
-    //The following runs all the test functions without checking
-    //the logged error types. 
-
-    //Running test1() to test6()
-    if (!test1()) { _passAll = FAIL; }
-    if (!test2()) { _passAll = FAIL; }
-    if (!test3()) { _passAll = FAIL; }
-    if (!test4()) { _passAll = FAIL; }
-    if (!test5()) { _passAll = FAIL; }
-    if (!test6()) { _passAll = FAIL; }
-
-    return _passAll;
-  }
-  
   /**
    * Creates a new database on the disk.
    */
   protected void create_minibase() {
-    System.out.println("Creating database...\nReplacer: " + "LRU_Look_ahead");
-    new Minibase(dbpath, DB_SIZE, BUF_SIZE, LAH_SIZE, "LRU_Look_ahead", false);
+    System.out.println("Creating database...\nReplacer: " + BUF_POLICY);
+    new Minibase(DB_PATH, DB_SIZE, BUF_SIZE, BUF_POLICY, false);
   }
 
+  /**
+   * Loads an existing database from the disk.
+   */
+  protected void load_minibase() {
+    System.out.println("Loading database...\nReplacer: " + BUF_POLICY);
+    new Minibase(DB_PATH, DB_SIZE, BUF_SIZE, BUF_POLICY, true);
+  }
+
+  // --------------------------------------------------------------------------
 
   /**
-   * Used to verify whether the exception thrown from
-   * the bottom layer is the one expected.
+   * Resets the random generator to the default seed.
    */
-  public boolean checkException (ChainException e, 
-				 String expectedException) {
+  protected void initRandom() {
+    random = new Random(74);
+  }
 
-    boolean notCaught = true;
-    while (true) {
-      
-      String exception = e.getClass().getName();
-      
-      if (exception.equals(expectedException)) {
-	return (!notCaught);
+  /**
+   * Resets the performance counter history.
+   */
+  protected void initCounts() {
+    counts = new ArrayList<CountData>();
+  }
+
+  /**
+   * Saves the current performance counters, given the description.
+   */
+  protected void saveCounts(String desc) {
+
+    // create the new count data
+    CountData data = new CountData();
+    counts.add(data);
+    data.desc = desc;
+
+    // save the counts (in correct order)
+    Minibase.BufferManager.flushAllPages();
+    data.reads = Minibase.DiskManager.getReadCount();
+    data.writes = Minibase.DiskManager.getWriteCount();
+    data.allocs = Minibase.DiskManager.getAllocCount();
+    data.pinned = BUF_SIZE - Minibase.BufferManager.getNumUnpinned();
+
+  } // protected void saveCounts(String desc)
+
+  /**
+   * Prints the performance counters (i.e. for the current test).
+   */
+  protected void printCounters() {
+
+    CountData data = counts.get(counts.size() - 1);
+    System.out.println();
+    Minibase.BufferManager.flushAllPages();
+    System.out.println("  *** Number of reads:  "
+        + (Minibase.DiskManager.getReadCount() - data.reads));
+    System.out.println("  *** Number of writes: "
+        + (Minibase.DiskManager.getWriteCount() - data.writes));
+    System.out.println("  *** Net total pages:  "
+        + (Minibase.DiskManager.getAllocCount() - data.allocs));
+    int numbufs = Minibase.BufferManager.getNumBuffers();
+    System.out
+        .println("  *** Remaining Pinned: "
+            + (numbufs - Minibase.BufferManager.getNumUnpinned()) + " / "
+            + numbufs);
+
+  } // protected void printCounters()
+
+  /**
+   * Prints the complete history of the performance counters.
+   * 
+   * @param sepcnt how many lines to print before each separator
+   */
+  protected void printSummary(int sepcnt) {
+
+    System.out.println();
+    String seperator = "--------------------------------------";
+    System.out.println(seperator);
+    System.out.println("\tReads\tWrites\tAllocs\tPinned");
+    int size = counts.size();
+    for (int i = 1; i < size; i += 2) {
+
+      if (i % (sepcnt * 2) == 1) {
+        System.out.println(seperator);
       }
-      
-      if ( e.prev==null ) {
-	return notCaught;
-      }
-      e = (ChainException)e.prev;
-    }
-    
-  } // end of checkException
-  
-} // end of TestDriver  
+
+      CountData before = counts.get(i - 1);
+      CountData after = counts.get(i);
+      System.out.print(after.desc);
+
+      System.out.print("\t" + (after.reads - before.reads));
+      System.out.print("\t" + (after.writes - before.writes));
+      System.out.print("\t" + (after.allocs - before.allocs));
+      System.out.print("\t" + (after.pinned - before.pinned));
+      System.out.println();
+
+    } // for
+    System.out.println(seperator);
+
+  } // protected void printSummary(int sepcnt)
+
+} // class TestDriver implements GlobalConst
