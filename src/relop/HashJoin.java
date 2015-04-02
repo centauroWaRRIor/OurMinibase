@@ -1,6 +1,6 @@
 package relop;
 
-public class HashJoin extends Iterator {
+//public class HashJoin extends Iterator {
 
 	
-}
+//}
