@@ -1,5 +1,5 @@
 JDKPATH = /usr
-LIBPATH = "lib/bufmgr.jar" "lib/diskmgr.jar"
+LIBPATH = "lib/bufmgr.jar:lib/diskmgr.jar:lib/heap.jar:lib/index.jar"
 
 CLASSPATH = .:..:$(LIBPATH)
 BINPATH = $(JDKPATH)/bin
