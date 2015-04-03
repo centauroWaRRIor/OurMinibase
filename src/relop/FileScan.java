@@ -10,9 +10,9 @@ import heap.HeapScan;
  */
 public class FileScan extends Iterator {
 
-  /* A file scan is a heapscan that returns tuples instead of bytes[].
-   * Hence we need to store a HeapFile reference in order to access
-   * the heapscan and a schema reference in order to produce the tuples.
+  /* A FileScan is a HeapScan that returns tuples instead of bytes[].
+   * Hence, we need to store a HeapFile reference in order to access
+   * the HeapScan and a schema reference in order to produce the tuples.
    * But the schema is already stored in the iterator parent.
    */
   private HeapFile heapFile;
@@ -21,8 +21,9 @@ public class FileScan extends Iterator {
 	
   /**
    * Constructs a file scan, given the schema and heap file.
+ * @throws Exception 
    */
-  public FileScan(Schema schema, HeapFile file) {
+  public FileScan(Schema schema, HeapFile file) throws Exception {
 	setSchema(schema); // schema is protected in the parent class so need to use this setter
 	currentRid = new RID();
     this.heapFile = file;
@@ -30,8 +31,7 @@ public class FileScan extends Iterator {
 	    heapScan = heapFile.openScan();
 	}
 	catch (Exception e) {
-		System.err.println ("*** Error opening scan\n");
-		e.printStackTrace();
+		throw new Exception("*** Error opening scan");
 	}
 
   }
@@ -53,7 +53,7 @@ public class FileScan extends Iterator {
    */
   public void restart() {
      close();
-     heapScan = heapFile.openScan();
+	 heapScan = heapFile.openScan();
   }
 
   /**
@@ -85,17 +85,13 @@ public class FileScan extends Iterator {
    */
   public Tuple getNext() {
 	  byte[] recordData;
-	  if(heapScan.hasNext()) {
-		  try {
+
+	  try {
             recordData = heapScan.getNext(currentRid);
             return new Tuple(getSchema(), recordData);
-		  } catch (IllegalStateException exc) {
-			  throw new IllegalStateException("Error in heapScan.getNext");
-		  }
-	  }
-	  else 
+	  } catch (IllegalStateException exc) {
 		  throw new IllegalStateException("No more tuples");
-	  
+	  }
   }
 
   /**

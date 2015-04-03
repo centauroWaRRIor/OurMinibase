@@ -76,6 +76,7 @@ class ROTest extends TestDriver {
 //		status &= rot.test3();
 		
 		status &= rot.testFileScan();
+		status &= rot.testKeyScan();
 
 		// display the final results
 		System.out.println();
@@ -88,13 +89,10 @@ class ROTest extends TestDriver {
 
 	} // public static void main (String argv[])
 
-	/**
-	 * 
-	 */
 	protected boolean testFileScan() {
 		try {
 
-			System.out.println("\nTest 0: Simple test for FileScan");
+			System.out.println("\nTest testFileScan: Simple test for FileScan");
 			initCounts();
 			saveCounts(null);
 
@@ -128,24 +126,83 @@ class ROTest extends TestDriver {
 			fileScan = null;
 			file = null;
 			System.gc();
-			saveCounts("join");
+			saveCounts("end");
 
 			// that's all folks!
-			System.out.print("\n\nTest 0 completed without exception.");
+			System.out.print("\n\nTest testFileScan completed without exception.");
 			return PASS;
 
 		} catch (Exception exc) {
 
 			exc.printStackTrace(System.out);
-			System.out.print("\n\nTest 0 terminated because of exception.");
+			System.out.print("\n\nTest testFileScan terminated because of exception.");
 			return FAIL;
 
 		} finally {
 			printSummary(6);
 			System.out.println();
 		}
-	} // protected boolean test1()
+	} // protected boolean testFileScan()
 	
+	protected boolean testKeyScan() {
+		try {
+
+			System.out.println("\nTest testKeyScan: Simple test for KeyScan");
+			initCounts();
+			saveCounts(null);
+
+			// create and populate a temporary Drivers file and index
+			Tuple tuple = new Tuple(s_drivers);
+			HeapFile file = new HeapFile(null);
+			HashIndex index = new HashIndex(null);
+			for (int i = 1; i <= 10; i++) {
+
+				// create the tuple
+				tuple.setIntFld(0, i);
+				tuple.setStringFld(1, "f" + i);
+				tuple.setStringFld(2, "l" + i);
+				Float age = (float) (i * 7.7);
+				tuple.setFloatFld(3, age);
+				tuple.setIntFld(4, i + 100);
+
+				// insert the tuple in the file and index
+				RID rid = file.insertRecord(tuple.getData());
+				index.insertEntry(new SearchKey(age), rid);
+
+			} // for
+			saveCounts("insert");
+
+			// test index scan
+			saveCounts(null);
+			System.out.println("\n  ~> test key scan (Age = 53.9)...\n");
+			SearchKey key = new SearchKey(53.9F);
+			KeyScan keyscan = new KeyScan(s_drivers, index, key, file);
+			keyscan.execute();
+			saveCounts("ixscan");
+            
+	        // destroy temp files before doing final counts
+	        keyscan = null;
+	        index = null;
+	        file = null;
+	        System.gc();
+	        saveCounts("end");
+
+	        // that's all folks!
+	        System.out.print("\n\nTest testKeyScan completed without exception.");
+	        return PASS;
+
+        } catch (Exception exc) {
+
+	       exc.printStackTrace(System.out);
+	       System.out.print("\n\nTest testKeyScan terminated because of exception.");
+	       return FAIL;
+
+        } finally {
+	       printSummary(6);
+	       System.out.println();
+        }
+   } // protected boolean testKeyScan()
+
 	
 //	/**
 //	 * 
