@@ -3,14 +3,40 @@ package relop;
 /**
  * The projection operator extracts columns from a relation; unlike in
  * relational algebra, this operator does NOT eliminate duplicate tuples.
+ *
+ * It is not complicated, but we need to solve the issue of mapping both
+ * the schema and data from the original to the projected one.
+ *
+ * We create the schema at the beginning and set it in our superclass.
+ * We remember the mapping since we need to use it to convert for every Tuple
+ * 
+ * An arguably more efficient way is to actually copy the byte data but the
+ * solution here is a lot simpler and easier to read
+ *  
  */
 public class Projection extends Iterator {
 
+  private Iterator iter;
+
+    /* we need the mapping to convert the Tuple */
+  private Integer mapping[];
+	
   /**
    * Constructs a projection, given the underlying iterator and field numbers.
    */
   public Projection(Iterator iter, Integer... fields) {
-    throw new UnsupportedOperationException("Not implemented");
+    /* save the iterator */
+    this.iter = iter;
+    this.mapping = fields;
+    
+    /* Create a new scheme with the fields given */
+    Schema temp_schema = new Schema(fields.length);
+    for( int i = 0; i < fields.length; i++ ) {
+        temp_schema.initField(i, iter.getSchema(), fields[i] );
+    }
+
+    /* save this to our iterator */
+    setSchema(temp_schema);
   }
 
   /**
@@ -18,35 +44,39 @@ public class Projection extends Iterator {
    * child iterators, and increases the indent depth along the way.
    */
   public void explain(int depth) {
-    throw new UnsupportedOperationException("Not implemented");
+	System.out.println("Projects given fields from the supplied iterator\n" );
+	super.indent(depth);
+
+    /* tbd - check if this is the right usage */
+    iter.explain(depth);
   }
 
   /**
    * Restarts the iterator, i.e. as if it were just constructed.
    */
   public void restart() {
-    throw new UnsupportedOperationException("Not implemented");
+    iter.restart();
   }
 
   /**
    * Returns true if the iterator is open; false otherwise.
    */
   public boolean isOpen() {
-    throw new UnsupportedOperationException("Not implemented");
+    return iter.isOpen();
   }
 
   /**
    * Closes the iterator, releasing any resources (i.e. pinned pages).
    */
   public void close() {
-    throw new UnsupportedOperationException("Not implemented");
+    iter.close();
   }
 
   /**
    * Returns true if there are more tuples, false otherwise.
    */
   public boolean hasNext() {
-    throw new UnsupportedOperationException("Not implemented");
+    return iter.hasNext();
   }
 
   /**
@@ -55,7 +85,14 @@ public class Projection extends Iterator {
    * @throws IllegalStateException if no more tuples
    */
   public Tuple getNext() {
-    throw new UnsupportedOperationException("Not implemented");
+    Tuple t = iter.getNext();
+    Tuple tnew = new Tuple(getSchema());
+
+    for( int i = 0; i < mapping.length; i++ ) {
+        tnew.setField(i, t.getField(mapping[i]) );
+    }
+
+    return tnew;
   }
 
 } // public class Projection extends Iterator

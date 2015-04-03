@@ -78,6 +78,7 @@ class ROTest extends TestDriver {
 		status &= rot.testFileScan();
 		status &= rot.testKeyScan();
 		status &= rot.testIndexScan();
+		status &= rot.testProjection();
 
 		// display the final results
 		System.out.println();
@@ -234,6 +235,46 @@ class ROTest extends TestDriver {
         }
     }
 
+	protected boolean testProjection() {
+		try {
+
+			System.out.println("\nTest testProjection: Simple test for Projection");
+            HeapFile file = new HeapFile(null);
+            HashIndex index = new HashIndex(null);
+
+            createTestData( file, index );
+
+			// test index scan
+			saveCounts(null);
+			System.out.println("\n  ~> test projection ...\n");
+			IndexScan indexscan = new IndexScan(s_drivers, index, file);
+            Projection proj = new Projection(indexscan, 0, 1, 3 );
+			proj.execute();
+			saveCounts("proj");
+            
+	        // destroy temp files before doing final counts
+	        indexscan = null;
+	        index = null;
+	        file = null;
+            proj = null;
+	        System.gc();
+	        saveCounts("end");
+
+	        // that's all folks!
+	        System.out.print("\n\nTest testProjection completed without exception.");
+	        return PASS;
+
+        } catch (Exception exc) {
+
+	       exc.printStackTrace(System.out);
+	       System.out.print("\n\nTest testKeyScan terminated because of exception.");
+	       return FAIL;
+
+        } finally {
+	       printSummary(6);
+	       System.out.println();
+        }
+    }
 //	/**
 //	 * 
 //	 */
