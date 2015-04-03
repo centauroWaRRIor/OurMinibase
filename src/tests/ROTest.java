@@ -77,6 +77,7 @@ class ROTest extends TestDriver {
 		
 		status &= rot.testFileScan();
 		status &= rot.testKeyScan();
+		status &= rot.testIndexScan();
 
 		// display the final results
 		System.out.println();
@@ -89,16 +90,13 @@ class ROTest extends TestDriver {
 
 	} // public static void main (String argv[])
 
-	protected boolean testFileScan() {
-		try {
 
-			System.out.println("\nTest testFileScan: Simple test for FileScan");
+    private void createTestData( HeapFile file, HashIndex index ) {
 			initCounts();
 			saveCounts(null);
 
 			// create and populate a temporary Drivers file and index
 			Tuple tuple = new Tuple(s_drivers);
-			HeapFile file = new HeapFile("myheapFile");
 			for (int i = 1; i <= 10; i++) {
 
 				// create the tuple
@@ -111,9 +109,21 @@ class ROTest extends TestDriver {
 
 				// insert the tuple in the file and index
 				RID rid = file.insertRecord(tuple.getData());
+                if( index != null ) { 
+				    index.insertEntry(new SearchKey(age), rid);
+                }
 
 			} // for
 			saveCounts("insert");
+    }
+
+	protected boolean testFileScan() {
+		try {
+
+			System.out.println("\nTest testFileScan: Simple test for FileScan");
+            HeapFile file = new HeapFile( "myheapfile" );
+
+            createTestData( file, null );
 
 			// test index scan
 			saveCounts(null);
@@ -148,29 +158,10 @@ class ROTest extends TestDriver {
 		try {
 
 			System.out.println("\nTest testKeyScan: Simple test for KeyScan");
-			initCounts();
-			saveCounts(null);
+            HeapFile file = new HeapFile(null);
+            HashIndex index = new HashIndex(null);
 
-			// create and populate a temporary Drivers file and index
-			Tuple tuple = new Tuple(s_drivers);
-			HeapFile file = new HeapFile(null);
-			HashIndex index = new HashIndex(null);
-			for (int i = 1; i <= 10; i++) {
-
-				// create the tuple
-				tuple.setIntFld(0, i);
-				tuple.setStringFld(1, "f" + i);
-				tuple.setStringFld(2, "l" + i);
-				Float age = (float) (i * 7.7);
-				tuple.setFloatFld(3, age);
-				tuple.setIntFld(4, i + 100);
-
-				// insert the tuple in the file and index
-				RID rid = file.insertRecord(tuple.getData());
-				index.insertEntry(new SearchKey(age), rid);
-
-			} // for
-			saveCounts("insert");
+            createTestData( file, index );
 
 			// test index scan
 			saveCounts(null);
@@ -178,7 +169,7 @@ class ROTest extends TestDriver {
 			SearchKey key = new SearchKey(53.9F);
 			KeyScan keyscan = new KeyScan(s_drivers, index, key, file);
 			keyscan.execute();
-			saveCounts("ixscan");
+			saveCounts("keyscan");
             
 	        // destroy temp files before doing final counts
 	        keyscan = null;
@@ -204,6 +195,45 @@ class ROTest extends TestDriver {
    } // protected boolean testKeyScan()
 
 	
+	protected boolean testIndexScan() {
+		try {
+
+			System.out.println("\nTest testIndexScan: Simple test for IndexScan");
+            HeapFile file = new HeapFile(null);
+            HashIndex index = new HashIndex(null);
+
+            createTestData( file, index );
+
+			// test index scan
+			saveCounts(null);
+			System.out.println("\n  ~> test index scan ...\n");
+			IndexScan indexscan = new IndexScan(s_drivers, index, file);
+			indexscan.execute();
+			saveCounts("indexscan");
+            
+	        // destroy temp files before doing final counts
+	        indexscan = null;
+	        index = null;
+	        file = null;
+	        System.gc();
+	        saveCounts("end");
+
+	        // that's all folks!
+	        System.out.print("\n\nTest testIndexScan completed without exception.");
+	        return PASS;
+
+        } catch (Exception exc) {
+
+	       exc.printStackTrace(System.out);
+	       System.out.print("\n\nTest testKeyScan terminated because of exception.");
+	       return FAIL;
+
+        } finally {
+	       printSummary(6);
+	       System.out.println();
+        }
+    }
+
 //	/**
 //	 * 
 //	 */
