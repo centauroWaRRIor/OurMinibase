@@ -79,6 +79,7 @@ class ROTest extends TestDriver {
 		status &= rot.testKeyScan();
 		status &= rot.testIndexScan();
 		status &= rot.testProjection();
+		status &= rot.testSelection();
 
 		// display the final results
 		System.out.println();
@@ -235,6 +236,51 @@ class ROTest extends TestDriver {
         }
     }
 
+	protected boolean testSelection() {
+		try {
+
+			System.out.println("\nTest testSelection: Simple test for Selection");
+            HeapFile file = new HeapFile(null);
+            HashIndex index = new HashIndex(null);
+
+            createTestData( file, index );
+
+			// test selection operator
+			saveCounts(null);
+			System.out.println("\n  ~> test selection (Age > 65 OR Age < 15)...\n");
+			Predicate[] preds = new Predicate[] {
+					new Predicate(AttrOperator.GT, AttrType.FIELDNO, 3, AttrType.FLOAT,
+							65F),
+							new Predicate(AttrOperator.LT, AttrType.FIELDNO, 3, AttrType.FLOAT,
+									15F) };
+			FileScan scan = new FileScan(s_drivers, file);
+			Selection sel = new Selection(scan, preds);
+			sel.execute();
+			saveCounts("select");
+
+			// destroy temp files before doing final counts
+			sel = null;
+			scan = null;
+			file = null;
+			System.gc();
+			saveCounts("end");
+
+	        // that's all folks!
+	        System.out.print("\n\nTest testProjection completed without exception.");
+	        return PASS;
+
+        } catch (Exception exc) {
+
+	       exc.printStackTrace(System.out);
+	       System.out.print("\n\nTest testKeyScan terminated because of exception.");
+	       return FAIL;
+
+        } finally {
+	       printSummary(6);
+	       System.out.println();
+        }
+    }
+	
 	protected boolean testProjection() {
 		try {
 
@@ -244,7 +290,7 @@ class ROTest extends TestDriver {
 
             createTestData( file, index );
 
-			// test index scan
+			// test projection
 			saveCounts(null);
 			System.out.println("\n  ~> test projection ...\n");
 			IndexScan indexscan = new IndexScan(s_drivers, index, file);

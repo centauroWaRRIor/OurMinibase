@@ -85,14 +85,17 @@ public class Projection extends Iterator {
    * @throws IllegalStateException if no more tuples
    */
   public Tuple getNext() {
-    Tuple t = iter.getNext();
-    Tuple tnew = new Tuple(getSchema());
-
-    for( int i = 0; i < mapping.length; i++ ) {
-        tnew.setField(i, t.getField(mapping[i]) );
-    }
-
-    return tnew;
+	try {  
+	    Tuple t = iter.getNext();
+	    Tuple tnew = new Tuple(getSchema());
+		
+        for( int i = 0; i < mapping.length; i++ ) {
+           tnew.setField(i, t.getField(mapping[i]) );
+        }
+       return tnew;
+	} catch (IllegalStateException e) {
+	   throw new IllegalStateException("There are no more tuples to project");
+	}
   }
 
 } // public class Projection extends Iterator

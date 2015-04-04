@@ -6,12 +6,23 @@ package relop;
  * connected by OR operators.
  */
 public class Selection extends Iterator {
-
+  
+  /* Underlying iterator, be it FileScanner, KeyScan, another selection
+   * etc.
+   */
+  private Iterator iterator;
+  /* Remember the list of predicates logically connected by OR operators. 
+   */
+  private Predicate predicates[];
+ 
   /**
    * Constructs a selection, given the underlying iterator and predicates.
    */
   public Selection(Iterator iter, Predicate... preds) {
-    throw new UnsupportedOperationException("Not implemented");
+    /* Initialize references */
+	iterator = iter;
+	predicates = preds;
+	setSchema(iterator.getSchema());
   }
 
   /**
@@ -19,35 +30,39 @@ public class Selection extends Iterator {
    * child iterators, and increases the indent depth along the way.
    */
   public void explain(int depth) {
-    throw new UnsupportedOperationException("Not implemented");
+	super.indent(depth);
+	System.out.println("Selects tuples if they meet any of the predicates\n" );
+    /* tbd - check if this is the right usage */
+    iterator.explain(depth);
+
   }
 
   /**
    * Restarts the iterator, i.e. as if it were just constructed.
    */
   public void restart() {
-    throw new UnsupportedOperationException("Not implemented");
+     iterator.restart();
   }
 
   /**
    * Returns true if the iterator is open; false otherwise.
    */
   public boolean isOpen() {
-    throw new UnsupportedOperationException("Not implemented");
+     return iterator.isOpen();
   }
 
   /**
    * Closes the iterator, releasing any resources (i.e. pinned pages).
    */
   public void close() {
-    throw new UnsupportedOperationException("Not implemented");
+     iterator.close();
   }
 
   /**
    * Returns true if there are more tuples, false otherwise.
    */
   public boolean hasNext() {
-    throw new UnsupportedOperationException("Not implemented");
+     return iterator.hasNext();
   }
 
   /**
@@ -56,7 +71,35 @@ public class Selection extends Iterator {
    * @throws IllegalStateException if no more tuples
    */
   public Tuple getNext() {
-    throw new UnsupportedOperationException("Not implemented");
+	Tuple t;
+	do {  
+       t = iterator.getNext();
+	
+       for( int i = 0; i < predicates.length; i++ ) {
+    	   /* Iterate through predicates until finding
+    	    * the first one that evaluates to TRUE. This
+    	    * short cuircuit logic follows from the fact
+    	    * that predicates are logically connected by
+    	    * OR operators.
+    	    * However we check for operator validity before
+    	    * evaluating the predicate
+    	    */
+    	   //if(predicates[i].validate(getSchema()))
+    	   {
+    		  try {
+    			   if(predicates[i].evaluate(t))
+    				   return t;
+    		  } catch (IllegalStateException e2) {
+    		  throw new IllegalStateException("Error evaluating predicate");
+    		   }
+    	   }
+    	   //else {
+    	   //   throw new IllegalStateException("Projection failed due to invalid predicate");
+    	   //}
+       }
+    } while (iterator.hasNext());
+
+	throw new IllegalStateException("Selection operator has no more tuples to select");
   }
 
 } // public class Selection extends Iterator

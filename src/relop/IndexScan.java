@@ -5,7 +5,6 @@ import heap.HeapFile;
 import index.HashIndex;
 
 import global.RID;
-import index.HashIndex;
 import index.BucketScan;
 
 /**
