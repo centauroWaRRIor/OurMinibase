@@ -75,10 +75,10 @@ class ROTest extends TestDriver {
 //		status &= rot.test2();
 //		status &= rot.test3();
 		
-		status &= rot.testFileScan();
-		status &= rot.testKeyScan();
-		status &= rot.testIndexScan();
-		status &= rot.testProjection();
+//		status &= rot.testFileScan();
+//		status &= rot.testKeyScan();
+//		status &= rot.testIndexScan();
+//		status &= rot.testProjection();
 		status &= rot.testSelection();
 
 		// display the final results
@@ -321,111 +321,111 @@ class ROTest extends TestDriver {
 	       System.out.println();
         }
     }
-//	/**
-//	 * 
-//	 */
-//	protected boolean test1() {
-//		try {
-//
-//			System.out.println("\nTest 1: Primative relational operators");
-//			initCounts();
-//			saveCounts(null);
-//
-//			// create and populate a temporary Drivers file and index
-//			Tuple tuple = new Tuple(s_drivers);
-//			HeapFile file = new HeapFile(null);
-//			HashIndex index = new HashIndex(null);
-//			for (int i = 1; i <= 10; i++) {
-//
-//				// create the tuple
-//				tuple.setIntFld(0, i);
-//				tuple.setStringFld(1, "f" + i);
-//				tuple.setStringFld(2, "l" + i);
-//				Float age = (float) (i * 7.7);
-//				tuple.setFloatFld(3, age);
-//				tuple.setIntFld(4, i + 100);
-//
-//				// insert the tuple in the file and index
-//				RID rid = file.insertRecord(tuple.getData());
-//				index.insertEntry(new SearchKey(age), rid);
-//
-//			} // for
-//			saveCounts("insert");
-//
-//			// test index scan
-//			saveCounts(null);
-//			System.out.println("\n  ~> test key scan (Age = 53.9)...\n");
-//			SearchKey key = new SearchKey(53.9F);
-//			KeyScan keyscan = new KeyScan(s_drivers, index, key, file);
-//			keyscan.execute();
-//			saveCounts("ixscan");
-//
-//			// test selection operator
-//			saveCounts(null);
-//			System.out.println("\n  ~> test selection (Age > 65 OR Age < 15)...\n");
-//			Predicate[] preds = new Predicate[] {
-//					new Predicate(AttrOperator.GT, AttrType.FIELDNO, 3, AttrType.FLOAT,
-//							65F),
-//							new Predicate(AttrOperator.LT, AttrType.FIELDNO, 3, AttrType.FLOAT,
-//									15F) };
-//			FileScan scan = new FileScan(s_drivers, file);
-//			Selection sel = new Selection(scan, preds);
-//			sel.execute();
-//			saveCounts("select");
-//
-//			// test projection operator
-//			saveCounts(null);
-//			System.out.println("\n  ~> test projection (columns 3 and 1)...\n");
-//			scan = new FileScan(s_drivers, file);
-//			Projection pro = new Projection(scan, 3, 1);
-//			pro.execute();
-//			saveCounts("project");
-//
-//			// test simple pipelining
-//			saveCounts(null);
-//			System.out.println("\n  ~> selection and projection (pipelined)...\n");
-//			scan = new FileScan(s_drivers, file);
-//			sel = new Selection(scan, preds);
-//			pro = new Projection(sel, 3, 1);
-//			pro.execute();
-//			saveCounts("both");
-//
-//			// test join operator
-//			saveCounts(null);
-//			System.out.println("\n  ~> test simple (nested loops) join...\n");
-//			preds = new Predicate[] { new Predicate(AttrOperator.EQ,
-//					AttrType.FIELDNO, 0, AttrType.FIELDNO, 5) };
-//			SimpleJoin join = new SimpleJoin(new FileScan(s_drivers, file),
-//					new FileScan(s_drivers, file), preds);
-//			pro = new Projection(join, 0, 1, 5, 6);
-//			pro.execute();
-//
-//			// destroy temp files before doing final counts
-//			join = null;
-//			pro = null;
-//			sel = null;
-//			scan = null;
-//			keyscan = null;
-//			index = null;
-//			file = null;
-//			System.gc();
-//			saveCounts("join");
-//
-//			// that's all folks!
-//			System.out.print("\n\nTest 1 completed without exception.");
-//			return PASS;
-//
-//		} catch (Exception exc) {
-//
-//			exc.printStackTrace(System.out);
-//			System.out.print("\n\nTest 1 terminated because of exception.");
-//			return FAIL;
-//
-//		} finally {
-//			printSummary(6);
-//			System.out.println();
-//		}
-//	} // protected boolean test1()
+	/**
+	 * 
+	 */
+	protected boolean test1() {
+		try {
+
+			System.out.println("\nTest 1: Primative relational operators");
+			initCounts();
+			saveCounts(null);
+
+			// create and populate a temporary Drivers file and index
+			Tuple tuple = new Tuple(s_drivers);
+			HeapFile file = new HeapFile(null);
+			HashIndex index = new HashIndex(null);
+			for (int i = 1; i <= 10; i++) {
+
+				// create the tuple
+				tuple.setIntFld(0, i);
+				tuple.setStringFld(1, "f" + i);
+				tuple.setStringFld(2, "l" + i);
+				Float age = (float) (i * 7.7);
+				tuple.setFloatFld(3, age);
+				tuple.setIntFld(4, i + 100);
+
+				// insert the tuple in the file and index
+				RID rid = file.insertRecord(tuple.getData());
+				index.insertEntry(new SearchKey(age), rid);
+
+			} // for
+			saveCounts("insert");
+
+			// test index scan
+			saveCounts(null);
+			System.out.println("\n  ~> test key scan (Age = 53.9)...\n");
+			SearchKey key = new SearchKey(53.9F);
+			KeyScan keyscan = new KeyScan(s_drivers, index, key, file);
+			keyscan.execute();
+			saveCounts("ixscan");
+
+			// test selection operator
+			saveCounts(null);
+			System.out.println("\n  ~> test selection (Age > 65 OR Age < 15)...\n");
+			Predicate[] preds = new Predicate[] {
+					new Predicate(AttrOperator.GT, AttrType.FIELDNO, 3, AttrType.FLOAT,
+							65F),
+							new Predicate(AttrOperator.LT, AttrType.FIELDNO, 3, AttrType.FLOAT,
+									15F) };
+			FileScan scan = new FileScan(s_drivers, file);
+			Selection sel = new Selection(scan, preds);
+			sel.execute();
+			saveCounts("select");
+
+			// test projection operator
+			saveCounts(null);
+			System.out.println("\n  ~> test projection (columns 3 and 1)...\n");
+			scan = new FileScan(s_drivers, file);
+			Projection pro = new Projection(scan, 3, 1);
+			pro.execute();
+			saveCounts("project");
+
+			// test simple pipelining
+			saveCounts(null);
+			System.out.println("\n  ~> selection and projection (pipelined)...\n");
+			scan = new FileScan(s_drivers, file);
+			sel = new Selection(scan, preds);
+			pro = new Projection(sel, 3, 1);
+			pro.execute();
+			saveCounts("both");
+
+			// test join operator
+			saveCounts(null);
+			System.out.println("\n  ~> test simple (nested loops) join...\n");
+			preds = new Predicate[] { new Predicate(AttrOperator.EQ,
+					AttrType.FIELDNO, 0, AttrType.FIELDNO, 5) };
+			SimpleJoin join = new SimpleJoin(new FileScan(s_drivers, file),
+					new FileScan(s_drivers, file), preds);
+			pro = new Projection(join, 0, 1, 5, 6);
+			pro.execute();
+
+			// destroy temp files before doing final counts
+			join = null;
+			pro = null;
+			sel = null;
+			scan = null;
+			keyscan = null;
+			index = null;
+			file = null;
+			System.gc();
+			saveCounts("join");
+
+			// that's all folks!
+			System.out.print("\n\nTest 1 completed without exception.");
+			return PASS;
+
+		} catch (Exception exc) {
+
+			exc.printStackTrace(System.out);
+			System.out.print("\n\nTest 1 terminated because of exception.");
+			return FAIL;
+
+		} finally {
+			printSummary(6);
+			System.out.println();
+		}
+	} // protected boolean test1()
 //
 //	/**
 //	 * SELECT * FROM Drivers D INNER JOIN Rides R ON (D.DriverId = R.DriverId);

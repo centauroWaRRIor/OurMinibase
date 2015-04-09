@@ -14,6 +14,14 @@ public class Selection extends Iterator {
   /* Remember the list of predicates logically connected by OR operators. 
    */
   private Predicate predicates[];
+  
+  /* Has the latest tuple produced being consumed?. 
+   */
+  private Boolean isNextTupleConsumed;
+  
+  /* Store latest tupe being produced. 
+   */
+  private Tuple nextTuple;
  
   /**
    * Constructs a selection, given the underlying iterator and predicates.
@@ -22,6 +30,7 @@ public class Selection extends Iterator {
     /* Initialize references */
 	iterator = iter;
 	predicates = preds;
+	isNextTupleConsumed = true;
 	setSchema(iterator.getSchema());
   }
 
@@ -62,44 +71,76 @@ public class Selection extends Iterator {
    * Returns true if there are more tuples, false otherwise.
    */
   public boolean hasNext() {
-     return iterator.hasNext();
+     if(!isNextTupleConsumed)
+	    return true;
+     else {
+        // Produce next tuple if there is one
+	    return produceNextTuple();
+     }
   }
+	 
+   /**
+    * Produces next tuple.
+    */
+   private boolean produceNextTuple() {
+	   
+	   Tuple t;
+	   while (iterator.hasNext()) {
+		   
+          t = iterator.getNext();
+			
+		  for( int i = 0; i < predicates.length; i++ ) {
+	   	     /* Iterate through predicates until finding
+	   	      * the first one that evaluates to TRUE. This
+	   	      * short cuircuit logic follows from the fact
+	   	      * that predicates are logically connected by
+	   	      * OR operators.
+	   	      * 
+	   	      * Ideally we'd check for operator validity before
+	   	      * evaluating the predicate but A) its not required
+	   	      * for this project and B) validate() method has a 
+	   	      * bug.
+	   	      */
+	   	     //if(predicates[i].validate(getSchema()))
+	   	     {
+	   		    try {
+	   			   if(predicates[i].evaluate(t)) {
+	   				  nextTuple = t;
+	   				  isNextTupleConsumed = false;
+	   			      return true;
+	   			   }
+	   				   
+	   		    } catch (IllegalStateException e2) {
+	   		       throw new IllegalStateException("Error evaluating predicate");
+	   		    }
+	   	     }
+	   	     //else {
+	   	     //   throw new IllegalStateException("Projection failed due to invalid predicate");
+	   	     //}
+	      }
+	   }
+	   return false;
+   }
 
-  /**
+/**
    * Gets the next tuple in the iteration.
    * 
    * @throws IllegalStateException if no more tuples
    */
   public Tuple getNext() {
-	Tuple t;
-	do {  
-       t = iterator.getNext();
-	
-       for( int i = 0; i < predicates.length; i++ ) {
-    	   /* Iterate through predicates until finding
-    	    * the first one that evaluates to TRUE. This
-    	    * short cuircuit logic follows from the fact
-    	    * that predicates are logically connected by
-    	    * OR operators.
-    	    * However we check for operator validity before
-    	    * evaluating the predicate
-    	    */
-    	   //if(predicates[i].validate(getSchema()))
-    	   {
-    		  try {
-    			   if(predicates[i].evaluate(t))
-    				   return t;
-    		  } catch (IllegalStateException e2) {
-    		  throw new IllegalStateException("Error evaluating predicate");
-    		   }
-    	   }
-    	   //else {
-    	   //   throw new IllegalStateException("Projection failed due to invalid predicate");
-    	   //}
-       }
-    } while (iterator.hasNext());
-
-	throw new IllegalStateException("Selection operator has no more tuples to select");
+    if(!isNextTupleConsumed) {
+    	isNextTupleConsumed = true;
+    	return nextTuple;
+    }
+    else {
+    	if(hasNext()) { // hasNext will produce next tuple and put it in nextTuple
+    	
+        	isNextTupleConsumed = true;
+        	return nextTuple;    		
+    	}
+    	else
+    		throw new IllegalStateException("Selection operator has no more tuples to select");
+    }
   }
 
 } // public class Selection extends Iterator

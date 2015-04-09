@@ -85,7 +85,7 @@ public class Projection extends Iterator {
    * @throws IllegalStateException if no more tuples
    */
   public Tuple getNext() {
-	try {  
+	try {
 	    Tuple t = iter.getNext();
 	    Tuple tnew = new Tuple(getSchema());
 		

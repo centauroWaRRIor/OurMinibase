@@ -28,7 +28,7 @@ public class SimpleJoin extends Iterator {
 		this.outer = left;
 		this.inner = right;
 		this.preds = preds;
-//		this.schema = Schema.join(left.schema, right.schema);
+		this.setSchema(Schema.join(left.getSchema(), right.getSchema())); 
 		
 		nextTupleIsConsumed = true;
 	}
@@ -85,8 +85,10 @@ public class SimpleJoin extends Iterator {
 
 		Tuple rightTuple;
 		
-		if (startJoin)
+		if (startJoin) {
 			leftTuple = outer.getNext();
+			startJoin = false;
+		}
 
 		while (true) {
 
@@ -95,7 +97,7 @@ public class SimpleJoin extends Iterator {
 				rightTuple = inner.getNext();
 
 				// try to match
-//				nextTuple = Tuple.join(leftTuple, rightTuple, this.schema);
+				nextTuple = Tuple.join(leftTuple, rightTuple, this.getSchema());
 				for (int i = 0; i < preds.length; i++)
 					if (preds[i].evaluate(nextTuple)) {
 						nextTupleIsConsumed = false;
