@@ -1,3 +1,5 @@
 DeptId, Name, MinSalary, MaxSalary
 1, Computer Science, 1000, 10000
 5, Mechanical Engineering, 10000, 10000
+2, Liberal Arts, 500, 600
+3, Football, 100000, 100000

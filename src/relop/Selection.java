@@ -35,7 +35,7 @@ public class Selection extends Iterator {
   }
 
   /**
-   * Gives a one-line explaination of the iterator, repeats the call on any
+   * Gives a one-line explanation of the iterator, repeats the call on any
    * child iterators, and increases the indent depth along the way.
    */
   public void explain(int depth) {

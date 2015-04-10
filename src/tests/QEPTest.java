@@ -82,8 +82,11 @@ public class QEPTest extends TestDriver {
 		}
 		
 		boolean status = PASS;
-		status &= qepT.query1();
-		status &= qepT.query2();
+		//status &= qepT.query1();
+		//status &= qepT.query2();
+		//status &= qepT.query3();
+		//status &= qepT.query4();
+		status &= qepT.query5();
 		
 		// display the final results
 		System.out.println();
@@ -210,6 +213,8 @@ public class QEPTest extends TestDriver {
 			// destroy temp files before doing final counts
 			pro = null;
 			scan = null;
+			sel = null;
+			preds = null;
 			System.gc();
 
 			// that's all folks!
@@ -228,7 +233,145 @@ public class QEPTest extends TestDriver {
 		}
 	} // protected boolean query2()
 
+	/**
+	 * Display the Name for the departments with MinSalary = MaxSalary
+	 * SELECT d.Name
+	 * FROM Department d;
+	 * WHERE d.MinSalary = d.MaxSalary
+	 */
+	protected boolean query3() {
+		try {
+
+			System.out.println("\nQuery 3: Display the Name for the departments with MinSalary = MaxSalary");
+			initCounts();
+			saveCounts(null);
+			Predicate[] preds = new Predicate[] {
+			new Predicate(AttrOperator.EQ, AttrType.COLNAME, "MinSalary", AttrType.COLNAME,
+					"MaxSalary") };
+			FileScan scan = new FileScan(s_department, t_department);
+			Selection sel = new Selection(scan, preds);
+			Projection pro = new Projection(sel, 1);
+			pro.execute();
+			saveCounts("query3");
+			
+			// destroy temp files before doing final counts
+			pro = null;
+			scan = null;
+			preds = null;
+			sel = null;
+			System.gc();
+
+			// that's all folks!
+			System.out.print("\n\nQuery 3 completed without exception.");
+			return PASS;
+
+		} catch (Exception exc) {
+
+			exc.printStackTrace(System.out);
+			System.out.print("\n\nQuery 3 terminated because of exception.");
+			return FAIL;
+
+		} finally {
+			printSummary(6);
+			System.out.println();
+		}
+	} // protected boolean query3()
 	
+	/**
+	 * Display the Name for employees whose Age > 30 and Salary < 1000
+	 * SELECT e.Name
+	 * FROM Employee e;
+	 * WHERE e.Age = d.Salary
+	 */
+	protected boolean query4() {
+		try {
+
+			System.out.println("\nQuery 4: Display the Name for employees whose Age > 30 and Salary < 1000");
+			initCounts();
+			saveCounts(null);
+			Predicate predAge = new Predicate(AttrOperator.GT, AttrType.COLNAME, "Age", AttrType.FLOAT,
+					30F);
+			Predicate predSalary = new Predicate(AttrOperator.LT, AttrType.COLNAME, "Salary", AttrType.FLOAT,
+					1000F);
+			
+			FileScan scan = new FileScan(s_employee, t_employee);
+			Selection selAge = new Selection(scan, predAge);
+			Selection selSalary = new Selection(selAge, predSalary);
+			Projection pro = new Projection(selSalary, 1);
+			pro.execute();
+			saveCounts("query4");
+			
+			// destroy temp files before doing final counts
+			pro = null;
+			scan = null;
+			pro = null;
+			scan = null;
+			predAge = null;
+			predSalary = null;
+			selAge = null;
+			selSalary = null;
+			System.gc();
+
+			// that's all folks!
+			System.out.print("\n\nQuery 4 completed without exception.");
+			return PASS;
+
+		} catch (Exception exc) {
+
+			exc.printStackTrace(System.out);
+			System.out.print("\n\nQuery 4 terminated because of exception.");
+			return FAIL;
+
+		} finally {
+			printSummary(6);
+			System.out.println();
+		}
+	} // protected boolean query4()
+	
+	/**
+	 * For each employee, display his Salary and the name of his department
+	 * SELECT e.Name, d.Name
+	 * FROM Employee e, Department d;
+	 * WHERE e.DeptId = d.DepthId
+	 */
+	protected boolean query5() {
+		try {
+
+			System.out.println("\nQuery 5: For each employee, display his Salary and the name of his department");
+			initCounts();
+			saveCounts(null);
+			Predicate[] preds = new Predicate[] { new Predicate(AttrOperator.EQ,
+			AttrType.FIELDNO, 4, AttrType.FIELDNO, 5) };
+			FileScan scan1 = new FileScan(s_employee, t_employee);
+			FileScan scan2 = new FileScan(s_department, t_department);
+	        SimpleJoin join = new SimpleJoin(scan1, scan2, preds);
+			Projection pro = new Projection(join, 1, 3, 6);
+			pro.execute();
+			saveCounts("query5");
+			
+			// destroy temp files before doing final counts
+			pro = null;
+			scan1 = null;
+			scan2 = null;
+			preds = null;
+			join = null;
+			System.gc();
+
+			// that's all folks!
+			System.out.print("\n\nQuery 5 completed without exception.");
+			return PASS;
+
+		} catch (Exception exc) {
+
+			exc.printStackTrace(System.out);
+			System.out.print("\n\nQuery 5 terminated because of exception.");
+			return FAIL;
+
+		} finally {
+			printSummary(6);
+			System.out.println();
+		}
+	} // protected boolean query5()
 }
 
 //
