@@ -80,7 +80,7 @@ public class SimpleJoin extends Iterator {
 		if (!nextTupleIsConsumed)
 			return true;
 		
-		if (!outer.hasNext())
+		if (!inner.hasNext() && !outer.hasNext())
 			return false;
 
 		Tuple rightTuple;
@@ -95,7 +95,7 @@ public class SimpleJoin extends Iterator {
 			while (inner.hasNext()) {
 				
 				rightTuple = inner.getNext();
-
+				//rightTuple.print(); // for debug 
 				// try to match
 				nextTuple = Tuple.join(leftTuple, rightTuple, this.getSchema());
 				for (int i = 0; i < preds.length; i++)

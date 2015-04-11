@@ -82,11 +82,14 @@ public class QEPTest extends TestDriver {
 		}
 		
 		boolean status = PASS;
-		//status &= qepT.query1();
-		//status &= qepT.query2();
-		//status &= qepT.query3();
-		//status &= qepT.query4();
+		status &= qepT.query1();
+		status &= qepT.query2();
+		status &= qepT.query3();
+		status &= qepT.query4();
 		status &= qepT.query5();
+		status &= qepT.query6();
+		status &= qepT.query7();
+		status &= qepT.query8();
 		
 		// display the final results
 		System.out.println();
@@ -332,7 +335,7 @@ public class QEPTest extends TestDriver {
 	 * For each employee, display his Salary and the name of his department
 	 * SELECT e.Name, d.Name
 	 * FROM Employee e, Department d;
-	 * WHERE e.DeptId = d.DepthId
+	 * WHERE e.DeptId = d.DeptId
 	 */
 	protected boolean query5() {
 		try {
@@ -345,7 +348,7 @@ public class QEPTest extends TestDriver {
 			FileScan scan1 = new FileScan(s_employee, t_employee);
 			FileScan scan2 = new FileScan(s_department, t_department);
 	        SimpleJoin join = new SimpleJoin(scan1, scan2, preds);
-			Projection pro = new Projection(join, 1, 3, 6);
+			Projection pro = new Projection(join, 3, 6);
 			pro.execute();
 			saveCounts("query5");
 			
@@ -372,69 +375,158 @@ public class QEPTest extends TestDriver {
 			System.out.println();
 		}
 	} // protected boolean query5()
-}
+	
+	/**
+	 * Display the Name and Salary for employees who work in the department that has a DeptId = 3.
+	 * SELECT e.Name, e.Salary
+	 * FROM Employee e
+	 * WHERE e.DeptId = 3
+	 */
+	protected boolean query6() {
+		try {
 
-//
-//// test selection operator
-//saveCounts(null);
-//Predicate[] preds = new Predicate[] {
-//		new Predicate(AttrOperator.GT, AttrType.FIELDNO, 3, AttrType.FLOAT,
-//				65F),
-//				new Predicate(AttrOperator.LT, AttrType.FIELDNO, 3, AttrType.FLOAT,
-//						15F) };
-//FileScan scan = new FileScan(s_drivers, file);
-//Selection sel = new Selection(scan, preds);
-//sel.execute();
-//saveCounts("select");
-//
-//// test projection operator
-//saveCounts(null);
-//scan = new FileScan(s_drivers, file);
-//Projection pro = new Projection(scan, 3, 1);
-//pro.execute();
-//saveCounts("project");
-//
-//// test simple pipelining
-//saveCounts(null);
-//System.out.println("\n  ~> selection and projection (pipelined)...\n");
-//scan = new FileScan(s_drivers, file);
-//sel = new Selection(scan, preds);
-//pro = new Projection(sel, 3, 1);
-//pro.execute();
-//saveCounts("both");
-//
-//// test join operator
-//saveCounts(null);
-//System.out.println("\n  ~> test simple (nested loops) join...\n");
-//preds = new Predicate[] { new Predicate(AttrOperator.EQ,
-//		AttrType.FIELDNO, 0, AttrType.FIELDNO, 5) };
-//SimpleJoin join = new SimpleJoin(new FileScan(s_drivers, file),
-//		new FileScan(s_drivers, file), preds);
-//pro = new Projection(join, 0, 1, 5, 6);
-//pro.execute();
-//
-//// destroy temp files before doing final counts
-//join = null;
-//pro = null;
-//sel = null;
-//scan = null;
-//keyscan = null;
-//index = null;
-//file = null;
-//System.gc();
-//saveCounts("join");
-//
-//// that's all folks!
-//System.out.print("\n\nTest 1 completed without exception.");
-//return PASS;
-//
-//} catch (Exception exc) {
-//
-//exc.printStackTrace(System.out);
-//System.out.print("\n\nTest 1 terminated because of exception.");
-//return FAIL;
-//
-//} finally {
-//printSummary(6);
-//System.out.println();
-//}
+			System.out.println("\nQuery 6: Display the Name and Salary for employees who work in the department that has a DeptId = 3.");
+			initCounts();
+			saveCounts(null);
+			Predicate[] pred = new Predicate[] { new Predicate(AttrOperator.EQ,
+			AttrType.COLNAME, "DeptId", AttrType.INTEGER, 3) };
+			FileScan scan = new FileScan(s_employee, t_employee);
+			Selection sel = new Selection(scan, pred);
+			Projection pro = new Projection(sel, 1, 3);
+			pro.execute();
+			saveCounts("query6");
+			
+			// destroy temp files before doing final counts
+			pro = null;
+			scan = null;
+			sel = null;
+			System.gc();
+
+			// that's all folks!
+			System.out.print("\n\nQuery 6 completed without exception.");
+			return PASS;
+
+		} catch (Exception exc) {
+
+			exc.printStackTrace(System.out);
+			System.out.print("\n\nQuery 6 terminated because of exception.");
+			return FAIL;
+
+		} finally {
+			printSummary(6);
+			System.out.println();
+		}
+	} // protected boolean query6()
+	
+	/**
+	 * Display the Salary for each employee who works in a department that has MaxSalary > 100000
+	 * SELECT e.Salary
+	 * FROM Employee e, Department d;
+	 * WHERE e.DeptId = d.DeptId &&
+	 *       d.MaxSalary > 100000
+	 */
+	protected boolean query7() {
+		try {
+
+			System.out.println("\nQuery 7: Display the Salary for each employee who works in a department that has MaxSalary > 100000");
+			initCounts();
+			saveCounts(null);
+			
+			Predicate[] predD = new Predicate[] { new Predicate(AttrOperator.GT,
+			AttrType.COLNAME, "MaxSalary", AttrType.FLOAT, 100000F) };
+			FileScan scanD = new FileScan(s_department, t_department);
+			Selection selD = new Selection(scanD, predD);
+			
+			Predicate[] predJoin = new Predicate[] { new Predicate(AttrOperator.EQ,
+			AttrType.FIELDNO, 0, AttrType.FIELDNO, 8) }; // d.DeptId == e.DeptId
+			FileScan scanE = new FileScan(s_employee, t_employee);
+	        SimpleJoin join = new SimpleJoin(selD, scanE, predJoin);
+			
+			Projection pro = new Projection(join, 7);
+
+			pro.execute();
+			
+			saveCounts("query7");
+			
+			// destroy temp files before doing final counts
+			pro = null;
+			selD = null;
+			scanD = null;
+			scanE = null;
+			predD = null;
+			predJoin = null;
+			join = null;
+			System.gc();
+
+			// that's all folks!
+			System.out.print("\n\nQuery 7 completed without exception.");
+			return PASS;
+
+		} catch (Exception exc) {
+
+			exc.printStackTrace(System.out);
+			System.out.print("\n\nQuery 7 terminated because of exception.");
+			return FAIL;
+
+		} finally {
+			printSummary(6);
+			System.out.println();
+		}
+	} // protected boolean query7()
+
+	/**
+	 * Display the Name for each employee whose Salary is less than the MinSalary of his department
+	 * SELECT e.Name
+	 * FROM Employee e, Department d;
+	 * WHERE e.DeptId = d.DeptId &&
+	 *       e.Salary < d.MinSalary
+	 */
+	protected boolean query8() {
+		try {
+
+			System.out.println("\nQuery 8: Display the Name for each employee whose Salary is less than the MinSalary of his department");
+			initCounts();
+			saveCounts(null);
+						
+			Predicate[] predJoin = new Predicate[] { new Predicate(AttrOperator.EQ,
+			AttrType.FIELDNO, 4, AttrType.FIELDNO, 5) }; // e.DeptId == d.DeptId
+			FileScan scanE = new FileScan(s_employee, t_employee);
+			FileScan scanD = new FileScan(s_department, t_department);
+	        SimpleJoin join = new SimpleJoin(scanE, scanD, predJoin);
+	        
+			Predicate[] predSel = new Predicate[] { new Predicate(AttrOperator.LT,
+			AttrType.FIELDNO, 3, AttrType.FIELDNO, 7) };
+			Selection sel = new Selection(join, predSel);
+			
+			Projection pro = new Projection(sel, 1);
+
+			pro.execute();
+			
+			saveCounts("query8");
+			
+			// destroy temp files before doing final counts
+			pro = null;
+			scanD = null;
+			scanE = null;
+			predSel = null;
+			predJoin = null;
+			join = null;
+			sel = null;
+			System.gc();
+
+			// that's all folks!
+			System.out.print("\n\nQuery 8 completed without exception.");
+			return PASS;
+
+		} catch (Exception exc) {
+
+			exc.printStackTrace(System.out);
+			System.out.print("\n\nQuery 8 terminated because of exception.");
+			return FAIL;
+
+		} finally {
+			printSummary(6);
+			System.out.println();
+		}
+	} // protected boolean query8()
+}
