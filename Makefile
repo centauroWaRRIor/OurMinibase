@@ -14,7 +14,7 @@ compile:src/*/*.java
 	$(JAVAC) -cp $(CLASSPATH) -d bin src/*/*.java
 
 xx : compile
-	$(JAVA) -cp $(CLASSPATH):bin tests.QEPTest
+	$(JAVA) -cp $(CLASSPATH):bin tests.QEPTest ./src/tests/SampleData/
 
 clean:
 	$(RM) -r bin/global bin/relop bin/tests    
