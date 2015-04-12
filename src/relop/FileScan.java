@@ -15,9 +15,9 @@ public class FileScan extends Iterator {
    * the HeapScan and a schema reference in order to produce the tuples.
    * But the schema is already stored in the iterator parent.
    */
-  private HeapFile heapFile;
+  protected HeapFile heapFile;
   private HeapScan heapScan;
-  private RID currentRid;
+  protected RID currentRid;
 	
   /**
    * Constructs a file scan, given the schema and heap file.

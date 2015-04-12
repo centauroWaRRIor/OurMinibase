@@ -6,12 +6,15 @@ BINPATH = $(JDKPATH)/bin
 JAVAC = $(JDKPATH)/bin/javac 
 JAVA  = $(JDKPATH)/bin/java 
 
-PROGS = xx
+PROGS = yy
 
 all: $(PROGS)
 
 compile:src/*/*.java
 	$(JAVAC) -cp $(CLASSPATH) -d bin src/*/*.java
+
+yy : compile
+	$(JAVA) -cp $(CLASSPATH):bin tests.ROTest
 
 xx : compile
 	$(JAVA) -cp $(CLASSPATH):bin tests.QEPTest ./src/tests/SampleData/
