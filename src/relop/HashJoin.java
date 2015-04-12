@@ -21,10 +21,21 @@ class IndexScanCreator {
     private HeapFile heapFile;
     private HashIndex hashIndex;
     private IndexScan indexScan;
+    private boolean ownHeapFile;
+    private boolean ownHashIndex;
+    private boolean ownIndexScan;
 
     public IndexScanCreator(Iterator iter, int colIndex) throws Exception {
         heapFile = null;
         hashIndex = null;
+
+        ownHeapFile = false;
+        ownHashIndex = false;
+        ownIndexScan = false;
+
+        if( colIndex < 0 || colIndex >= iter.getSchema().getCount() ) {
+            throw new Exception( "Invalid column Index passed - please check the parameters!" );
+        }
 
         if( iter instanceof IndexScan ) {
             /* we are done! */
@@ -37,6 +48,7 @@ class IndexScanCreator {
         if( iter instanceof FileScan )  {
             /* we need to create a hashIndex alone */
             this.hashIndex = new HashIndex(null);
+            ownHashIndex = true;
             FileScan fileScan = (FileScan) iter;
 
             while( fileScan.hasNext() ) {
@@ -45,11 +57,14 @@ class IndexScanCreator {
             }
 
             indexScan = new IndexScan(fileScan.getSchema(), hashIndex, fileScan.heapFile);
+            ownIndexScan = true;
         }
         else {
             /* create a HeapFile and populate with iter records */
             this.heapFile = new HeapFile(null);
+            ownHeapFile = true;
             this.hashIndex = new HashIndex(null);
+            ownHashIndex = true;
 
             while( iter.hasNext() ) {
                 Tuple t = iter.getNext();
@@ -58,13 +73,25 @@ class IndexScanCreator {
             }
 
             indexScan = new IndexScan(iter.getSchema(), hashIndex, heapFile);
+            ownIndexScan = true;
         }
     }
 
     public void close() { 
-        indexScan = null;
-        hashIndex = null;
-        heapFile = null;
+        if( ownIndexScan ) { 
+            //System.out.printf( "closing indexscan\n" );
+            indexScan = null;
+        }
+
+        if( ownHashIndex ) { 
+            //System.out.printf( "closing hashindex\n" );
+            hashIndex = null;
+        }
+
+        if( ownHeapFile ) {
+            //System.out.printf( "closing heapfile\n" );
+            heapFile = null;
+        }
     }
 
     public IndexScan getIndexScan() {
@@ -104,33 +131,40 @@ public class HashJoin extends Iterator {
     private HashTableDup currentHash;
     private int currentBucketIndex;
 
+    private void init() {
+        this.leftIndexScanCreator = null;
+        this.rightIndexScanCreator = null;
+
+        this.startJoin = false;
+
+        this.nextTupleIsConsumed = true;
+
+        this.nextTuple = null;
+
+        this.currentMatchedArray = null;
+        this.currentMatchedArrayIndex = -1;
+
+        this.rightTuple = null;
+
+        this.currentHash = null;
+        this.currentBucketIndex = -1;
+    }
+
     /**
      *  Constructs a HashJoin given a left iterator and right iterator and column
      *  indices into the iterators on which the equijoins are made.
      */
     public HashJoin( Iterator left, Iterator right, int leftColIndex, int rightColIndex ) {
-        this.startJoin = false;
-        this.nextTupleIsConsumed = true;
-
+        /* copy parameters */
         this.left = left;
         this.leftColIndex = leftColIndex;
 
         this.right = right;
         this.rightColIndex = rightColIndex;
 
-        this.currentMatchedArray = null;
-        this.currentMatchedArrayIndex = -1;
-        this.rightTuple = null;
-
-        this.nextTuple = null;
-
-        this.currentHash = null;
-        this.currentBucketIndex = -1;
-
-        if( left instanceof FileScan ) {
-            // System.out.printf( "left is a type of FileScan!\n" );
-        }
 		this.setSchema(Schema.join(left.getSchema(), right.getSchema())); 
+
+        init();
 	}
 	
 	/**
@@ -138,24 +172,26 @@ public class HashJoin extends Iterator {
 	 * child iterators, and increases the indent depth along the way.
 	 */
 	public void explain(int depth) {
-		
-		throw new UnsupportedOperationException("Not implemented");
+	    super.indent(depth);
+	    System.out.println("Performs a HashJoin between the two iterators passed\n" );
 	}
 
 	/**
 	 * Restarts the iterator, i.e. as if it were just constructed.
 	 */
 	public void restart() {
-
-		throw new UnsupportedOperationException("Not implemented");
+        init();
+        left.restart();
+        right.restart();
 	}
 
 	/**
 	 * Returns true if the iterator is open; false otherwise.
 	 */
 	public boolean isOpen() {
-		
-		return false;
+        if( startJoin && leftIndexScanCreator != null && rightIndexScanCreator != null )
+            return true;
+        return false;
 	}
 
 	/**
@@ -166,8 +202,11 @@ public class HashJoin extends Iterator {
 		this.left.close();
 		this.right.close();
 
-        this.leftIndexScanCreator.close();
         this.rightIndexScanCreator.close();
+        //System.out.printf( "closed rightindex..\n" );
+
+        this.leftIndexScanCreator.close();
+        //System.out.printf( "closed leftindex..\n" );
 	}
 
 	/**
@@ -190,7 +229,7 @@ public class HashJoin extends Iterator {
                 this.rightIndexScanCreator = new IndexScanCreator( right, rightColIndex );
             } catch( Exception e ) {
                 /* tbd: what is the right thing here? */
-                System.out.printf( "Unhandled exception in hasNext()\n" );
+                System.out.printf( "error while creating Index Scan: [%s]\n", e.getMessage() );
                 return false;
             }
 

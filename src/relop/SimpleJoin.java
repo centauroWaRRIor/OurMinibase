@@ -38,8 +38,8 @@ public class SimpleJoin extends Iterator {
 	 * child iterators, and increases the indent depth along the way.
 	 */
 	public void explain(int depth) {
-		
-		throw new UnsupportedOperationException("Not implemented");
+	    super.indent(depth);
+	    System.out.println("Performs a Simple Join between the two iterators passed\n" );
 	}
 
 	/**

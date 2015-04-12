@@ -6,7 +6,7 @@ BINPATH = $(JDKPATH)/bin
 JAVAC = $(JDKPATH)/bin/javac 
 JAVA  = $(JDKPATH)/bin/java 
 
-PROGS = yy
+PROGS = yy xx
 
 all: $(PROGS)
 

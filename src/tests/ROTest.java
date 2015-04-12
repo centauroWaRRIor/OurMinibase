@@ -71,15 +71,15 @@ class ROTest extends TestDriver {
 		// run all the test cases
 		System.out.println("\n" + "Running " + TEST_NAME + "...");
 		boolean status = PASS;
-//		status &= rot.test1();
+		status &= rot.test1();
 		status &= rot.test2();
-//		status &= rot.test3();
+		status &= rot.test3();
 		
-//		status &= rot.testFileScan();
-//		status &= rot.testKeyScan();
-//		status &= rot.testIndexScan();
-//		status &= rot.testProjection();
-//      status &= rot.testSelection();
+		status &= rot.testFileScan();
+		status &= rot.testKeyScan();
+		status &= rot.testIndexScan();
+		status &= rot.testProjection();
+        status &= rot.testSelection();
 
 		// display the final results
 		System.out.println();
@@ -519,96 +519,96 @@ class ROTest extends TestDriver {
 		}
 	} // protected boolean test2()
 
-//	/**
-//	 * SELECT * FROM Groups G INNER JOIN Rides R ON (G.GroupId = R.GroupId) INNER
-//	 * JOIN Drivers D ON (R.DriverId = D.DriverId) WHERE D.NumSeats < G.GroupId;
-//	 */
-//	protected boolean test3() {
-//		try {
-//
-//			System.out.println("\nTest 3: The most complex query yet!\n");
-//			initCounts();
-//
-//			// create and populate a temporary Drivers file and index
-//			saveCounts(null);
-//			Tuple tuple = new Tuple(s_drivers);
-//			HeapFile drivers = new HeapFile(null);
-//			HashIndex ixdrivers = new HashIndex(null);
-//			for (int i = 1; i <= SUPER_SIZE; i++) {
-//
-//				// create the tuple
-//				tuple.setIntFld(0, i);
-//				tuple.setStringFld(1, "f" + i);
-//				tuple.setStringFld(2, "l" + i);
-//				tuple.setFloatFld(3, (float) (i * 7.7));
-//				tuple.setIntFld(4, i + 100);
-//
-//				// insert the tuple in the file and index
-//				RID rid = drivers.insertRecord(tuple.getData());
-//				ixdrivers.insertEntry(new SearchKey(i), rid);
-//
-//			} // for
-//			saveCounts("drivers");
-//
-//			// create and populate the rides table
-//			saveCounts(null);
-//			initRandom();
-//			tuple = new Tuple(s_rides);
-//			HeapFile rides = new HeapFile(null);
-//			for (int i = 1; i <= SUPER_SIZE; i++) {
-//				// random relationships between drivers and groups
-//				int r1 = Math.abs(random.nextInt() % SUPER_SIZE + 1);
-//				int r2 = Math.abs(random.nextInt() % (SUPER_SIZE / 10) + 1);
-//				tuple.setAllFields(r1, r2, "3/27/2006", "4/7/2006");
-//				tuple.insertIntoFile(rides);
-//			}
-//			saveCounts("rides");
-//
-//			// create and populate the groups table
-//			saveCounts(null);
-//			tuple = new Tuple(s_groups);
-//			HeapFile groups = new HeapFile(null);
-//			for (int i = 1; i <= SUPER_SIZE / 10; i++) {
-//				tuple.setAllFields(i, "Purdue");
-//				tuple.insertIntoFile(groups);
-//			}
-//			saveCounts("groups");
-//
-//			// hash join of hash join; selection for output's sake
-//			saveCounts(null);
-//			HashJoin join1 = new HashJoin(new FileScan(s_groups, groups),
-//					new FileScan(s_rides, rides), 0, 1);
-//			HashJoin join2 = new HashJoin(join1, new IndexScan(s_drivers, ixdrivers,
-//					drivers), 2, 0);
-//			Selection sel = new Selection(join2, new Predicate(AttrOperator.LT,
-//					AttrType.FIELDNO, 10, AttrType.FIELDNO, 0));
-//			sel.execute();
-//
-//			// destroy temp files before doing final counts
-//			sel = null;
-//			join2 = null;
-//			join1 = null;
-//			groups = null;
-//			rides = null;
-//			ixdrivers = null;
-//			drivers = null;
-//			System.gc();
-//			saveCounts("query");
-//
-//			// that's all folks!
-//			System.out.print("\n\nTest 3 completed without exception.");
-//			return PASS;
-//
-//		} catch (Exception exc) {
-//
-//			exc.printStackTrace(System.out);
-//			System.out.print("\n\nTest 3 terminated because of exception.");
-//			return FAIL;
-//
-//		} finally {
-//			printSummary(4);
-//			System.out.println();
-//		}
-//	} // protected boolean test3()
+	/**
+	 * SELECT * FROM Groups G INNER JOIN Rides R ON (G.GroupId = R.GroupId) INNER
+	 * JOIN Drivers D ON (R.DriverId = D.DriverId) WHERE D.NumSeats < G.GroupId;
+	 */
+	protected boolean test3() {
+		try {
+
+			System.out.println("\nTest 3: The most complex query yet!\n");
+			initCounts();
+
+			// create and populate a temporary Drivers file and index
+			saveCounts(null);
+			Tuple tuple = new Tuple(s_drivers);
+			HeapFile drivers = new HeapFile(null);
+			HashIndex ixdrivers = new HashIndex(null);
+			for (int i = 1; i <= SUPER_SIZE; i++) {
+
+				// create the tuple
+				tuple.setIntFld(0, i);
+				tuple.setStringFld(1, "f" + i);
+				tuple.setStringFld(2, "l" + i);
+				tuple.setFloatFld(3, (float) (i * 7.7));
+				tuple.setIntFld(4, i + 100);
+
+				// insert the tuple in the file and index
+				RID rid = drivers.insertRecord(tuple.getData());
+				ixdrivers.insertEntry(new SearchKey(i), rid);
+
+			} // for
+			saveCounts("drivers");
+
+			// create and populate the rides table
+			saveCounts(null);
+			initRandom();
+			tuple = new Tuple(s_rides);
+			HeapFile rides = new HeapFile(null);
+			for (int i = 1; i <= SUPER_SIZE; i++) {
+				// random relationships between drivers and groups
+				int r1 = Math.abs(random.nextInt() % SUPER_SIZE + 1);
+				int r2 = Math.abs(random.nextInt() % (SUPER_SIZE / 10) + 1);
+				tuple.setAllFields(r1, r2, "3/27/2006", "4/7/2006");
+				tuple.insertIntoFile(rides);
+			}
+			saveCounts("rides");
+
+			// create and populate the groups table
+			saveCounts(null);
+			tuple = new Tuple(s_groups);
+			HeapFile groups = new HeapFile(null);
+			for (int i = 1; i <= SUPER_SIZE / 10; i++) {
+				tuple.setAllFields(i, "Purdue");
+				tuple.insertIntoFile(groups);
+			}
+			saveCounts("groups");
+
+			// hash join of hash join; selection for output's sake
+			saveCounts(null);
+			HashJoin join1 = new HashJoin(new FileScan(s_groups, groups),
+					new FileScan(s_rides, rides), 0, 1);
+			HashJoin join2 = new HashJoin(join1, new IndexScan(s_drivers, ixdrivers,
+					drivers), 2, 0);
+			Selection sel = new Selection(join2, new Predicate(AttrOperator.LT,
+					AttrType.FIELDNO, 10, AttrType.FIELDNO, 0));
+			sel.execute();
+
+			// destroy temp files before doing final counts
+			sel = null;
+			join2 = null;
+			join1 = null;
+			groups = null;
+			rides = null;
+			ixdrivers = null;
+			drivers = null;
+			System.gc();
+			saveCounts("query");
+
+			// that's all folks!
+			System.out.print("\n\nTest 3 completed without exception.");
+			return PASS;
+
+		} catch (Exception exc) {
+
+			exc.printStackTrace(System.out);
+			System.out.print("\n\nTest 3 terminated because of exception.");
+			return FAIL;
+
+		} finally {
+			printSummary(4);
+			System.out.println();
+		}
+	} // protected boolean test3()
 
 } // class ROTest extends TestDriver
