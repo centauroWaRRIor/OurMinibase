@@ -10,11 +10,9 @@ import java.io.IOException;
 
 import global.AttrOperator;
 import global.AttrType;
-import global.RID;
-import global.SearchKey;
 import heap.HeapFile;
 import relop.FileScan;
-import relop.KeyScan;
+import relop.HashJoin;
 import relop.Predicate;
 import relop.Projection;
 import relop.Schema;
@@ -87,12 +85,12 @@ public class QEPTest extends TestDriver {
 		status &= qepT.query3();
 		status &= qepT.query4();
 		status &= qepT.query5();
-		//status &= qepT.query5_hashJoin();
+		status &= qepT.query5_hashJoin();
 		status &= qepT.query6();
 		status &= qepT.query7();
-		//status &= qepT.query7_hashJoin();
+		status &= qepT.query7_hashJoin();
 		status &= qepT.query8();
-		//status &= qepT.query8_hashJoin();
+		status &= qepT.query8_hashJoin();
 		
 		// display the final results
 		System.out.println();
@@ -379,47 +377,47 @@ public class QEPTest extends TestDriver {
 		}
 	} // protected boolean query5()
 	
-//	/**
-//	 * For each employee, display his Salary and the name of his department
-//	 * SELECT e.Name, d.Name
-//	 * FROM Employee e, Department d;
-//	 * WHERE e.DeptId = d.DeptId
-//	 */
-//	protected boolean query5_hashJoin() {
-//		try {
-//
-//			System.out.println("\nQuery 5 (HashJoin variation): For each employee, display his Salary and the name of his department");
-//			initCounts();
-//			saveCounts(null);
-//			FileScan scan1 = new FileScan(s_employee, t_employee);
-//			FileScan scan2 = new FileScan(s_department, t_department);
-//	        HashJoin join = new HashJoin(scan1, scan2, 4, 5);
-//			Projection pro = new Projection(join, 3, 6);
-//			pro.execute();
-//			saveCounts("query5");
-//			
-//			// destroy temp files before doing final counts
-//			pro = null;
-//			scan1 = null;
-//			scan2 = null;
-//			join = null;
-//			System.gc();
-//
-//			// that's all folks!
-//			System.out.print("\n\nQuery 5 (HashJoin variation) completed without exception.");
-//			return PASS;
-//
-//		} catch (Exception exc) {
-//
-//			exc.printStackTrace(System.out);
-//			System.out.print("\n\nQuery 5 (HashJoin variation) terminated because of exception.");
-//			return FAIL;
-//
-//		} finally {
-//			printSummary(6);
-//			System.out.println();
-//		}
-//	} // protected boolean query5()
+	/**
+	 * For each employee, display his Salary and the name of his department
+	 * SELECT e.Name, d.Name
+	 * FROM Employee e, Department d;
+	 * WHERE e.DeptId = d.DeptId
+	 */
+	protected boolean query5_hashJoin() {
+		try {
+
+			System.out.println("\nQuery 5 (HashJoin variation): For each employee, display his Salary and the name of his department");
+			initCounts();
+			saveCounts(null);
+			FileScan scan1 = new FileScan(s_employee, t_employee);
+			FileScan scan2 = new FileScan(s_department, t_department);
+	        HashJoin join = new HashJoin(scan1, scan2, 4, 0);
+			Projection pro = new Projection(join, 3, 6);
+			pro.execute();
+			saveCounts("query5");
+			
+			// destroy temp files before doing final counts
+			pro = null;
+			scan1 = null;
+			scan2 = null;
+			join = null;
+			System.gc();
+
+			// that's all folks!
+			System.out.print("\n\nQuery 5 (HashJoin variation) completed without exception.");
+			return PASS;
+
+		} catch (Exception exc) {
+
+			exc.printStackTrace(System.out);
+			System.out.print("\n\nQuery 5 (HashJoin variation) terminated because of exception.");
+			return FAIL;
+
+		} finally {
+			printSummary(6);
+			System.out.println();
+		}
+	} // protected boolean query5()
 	
 	/**
 	 * Display the Name and Salary for employees who work in the department that has a DeptId = 3.
@@ -519,58 +517,58 @@ public class QEPTest extends TestDriver {
 		}
 	} // protected boolean query7()
 
-//	/**
-//	 * Display the Salary for each employee who works in a department that has MaxSalary > 100000
-//	 * SELECT e.Salary
-//	 * FROM Employee e, Department d;
-//	 * WHERE e.DeptId = d.DeptId &&
-//	 *       d.MaxSalary > 100000
-//	 */
-//	protected boolean query7_hashJoin() {
-//		try {
-//
-//			System.out.println("\nQuery 7 (HashJoin variation): Display the Salary for each employee who works in a department that has MaxSalary > 100000");
-//			initCounts();
-//			saveCounts(null);
-//			
-//			Predicate[] predD = new Predicate[] { new Predicate(AttrOperator.GT,
-//			AttrType.COLNAME, "MaxSalary", AttrType.FLOAT, 100000F) };
-//			FileScan scanD = new FileScan(s_department, t_department);
-//			Selection selD = new Selection(scanD, predD);
-//			
-//			FileScan scanE = new FileScan(s_employee, t_employee);
-//	        HashJoin join = new HashJoin(selD, scanE, 0, 8); // on DeptID
-//			
-//			Projection pro = new Projection(join, 7);
-//
-//			pro.execute();
-//			
-//			saveCounts("query7");
-//			
-//			// destroy temp files before doing final counts
-//			pro = null;
-//			selD = null;
-//			scanD = null;
-//			scanE = null;
-//			predD = null;
-//			join = null;
-//			System.gc();
-//
-//			// that's all folks!
-//			System.out.print("\n\nQuery 7 (HashJoin variation) completed without exception.");
-//			return PASS;
-//
-//		} catch (Exception exc) {
-//
-//			exc.printStackTrace(System.out);
-//			System.out.print("\n\nQuery 7 (HashJoin variation) terminated because of exception.");
-//			return FAIL;
-//
-//		} finally {
-//			printSummary(6);
-//			System.out.println();
-//		}
-//	} // protected boolean query7()
+	/**
+	 * Display the Salary for each employee who works in a department that has MaxSalary > 100000
+	 * SELECT e.Salary
+	 * FROM Employee e, Department d;
+	 * WHERE e.DeptId = d.DeptId &&
+	 *       d.MaxSalary > 100000
+	 */
+	protected boolean query7_hashJoin() {
+		try {
+
+			System.out.println("\nQuery 7 (HashJoin variation): Display the Salary for each employee who works in a department that has MaxSalary > 100000");
+			initCounts();
+			saveCounts(null);
+			
+			Predicate[] predD = new Predicate[] { new Predicate(AttrOperator.GT,
+			AttrType.COLNAME, "MaxSalary", AttrType.FLOAT, 100000F) };
+			FileScan scanD = new FileScan(s_department, t_department);
+			Selection selD = new Selection(scanD, predD);
+			
+			FileScan scanE = new FileScan(s_employee, t_employee);
+	        HashJoin join = new HashJoin(selD, scanE, 0, 4); // on DeptID
+			
+			Projection pro = new Projection(join, 7);
+
+			pro.execute();
+			
+			saveCounts("query7");
+			
+			// destroy temp files before doing final counts
+			pro = null;
+			selD = null;
+			scanD = null;
+			scanE = null;
+			predD = null;
+			join = null;
+			System.gc();
+
+			// that's all folks!
+			System.out.print("\n\nQuery 7 (HashJoin variation) completed without exception.");
+			return PASS;
+
+		} catch (Exception exc) {
+
+			exc.printStackTrace(System.out);
+			System.out.print("\n\nQuery 7 (HashJoin variation) terminated because of exception.");
+			return FAIL;
+
+		} finally {
+			printSummary(6);
+			System.out.println();
+		}
+	} // protected boolean query7()
 	
 	/**
 	 * Display the Name for each employee whose Salary is less than the MinSalary of his department
@@ -628,56 +626,56 @@ public class QEPTest extends TestDriver {
 		}
 	} // protected boolean query8()
 	
-//	/**
-//	 * Display the Name for each employee whose Salary is less than the MinSalary of his department
-//	 * SELECT e.Name
-//	 * FROM Employee e, Department d;
-//	 * WHERE e.DeptId = d.DeptId &&
-//	 *       e.Salary < d.MinSalary
-//	 */
-//	protected boolean query8_hashJoin() {
-//		try {
-//
-//			System.out.println("\nQuery 8 (HashJoin variation): Display the Name for each employee whose Salary is less than the MinSalary of his department");
-//			initCounts();
-//			saveCounts(null);
-//						
-//			FileScan scanE = new FileScan(s_employee, t_employee);
-//			FileScan scanD = new FileScan(s_department, t_department);
-//	        HashJoin join = new HashJoin(scanE, scanD, 4, 5); // on DeptId
-//	        
-//			Predicate[] predSel = new Predicate[] { new Predicate(AttrOperator.LT,
-//			AttrType.FIELDNO, 3, AttrType.FIELDNO, 7) };
-//			Selection sel = new Selection(join, predSel);
-//			
-//			Projection pro = new Projection(sel, 1);
-//
-//			pro.execute();
-//			
-//			saveCounts("query8");
-//			
-//			// destroy temp files before doing final counts
-//			pro = null;
-//			scanD = null;
-//			scanE = null;
-//			predSel = null;
-//			join = null;
-//			sel = null;
-//			System.gc();
-//
-//			// that's all folks!
-//			System.out.print("\n\nQuery 8 (HashJoin variation) completed without exception.");
-//			return PASS;
-//
-//		} catch (Exception exc) {
-//
-//			exc.printStackTrace(System.out);
-//			System.out.print("\n\nQuery 8 (HashJoin variation) terminated because of exception.");
-//			return FAIL;
-//
-//		} finally {
-//			printSummary(6);
-//			System.out.println();
-//		}
-//	} // protected boolean query8()
+	/**
+	 * Display the Name for each employee whose Salary is less than the MinSalary of his department
+	 * SELECT e.Name
+	 * FROM Employee e, Department d;
+	 * WHERE e.DeptId = d.DeptId &&
+	 *       e.Salary < d.MinSalary
+	 */
+	protected boolean query8_hashJoin() {
+		try {
+
+			System.out.println("\nQuery 8 (HashJoin variation): Display the Name for each employee whose Salary is less than the MinSalary of his department");
+			initCounts();
+			saveCounts(null);
+						
+			FileScan scanE = new FileScan(s_employee, t_employee);
+			FileScan scanD = new FileScan(s_department, t_department);
+	        HashJoin join = new HashJoin(scanE, scanD, 4, 0); // on DeptId
+	        
+			Predicate[] predSel = new Predicate[] { new Predicate(AttrOperator.LT,
+			AttrType.FIELDNO, 3, AttrType.FIELDNO, 7) };
+			Selection sel = new Selection(join, predSel);
+			
+			Projection pro = new Projection(sel, 1);
+
+			pro.execute();
+			
+			saveCounts("query8");
+			
+			// destroy temp files before doing final counts
+			pro = null;
+			scanD = null;
+			scanE = null;
+			predSel = null;
+			join = null;
+			sel = null;
+			System.gc();
+
+			// that's all folks!
+			System.out.print("\n\nQuery 8 (HashJoin variation) completed without exception.");
+			return PASS;
+
+		} catch (Exception exc) {
+
+			exc.printStackTrace(System.out);
+			System.out.print("\n\nQuery 8 (HashJoin variation) terminated because of exception.");
+			return FAIL;
+
+		} finally {
+			printSummary(6);
+			System.out.println();
+		}
+	} // protected boolean query8()
 }
