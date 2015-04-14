@@ -73,7 +73,7 @@ public class KeyScan extends Iterator {
    * Closes the iterator, releasing any resources (i.e. pinned pages).
    */
   public void close() {
-	hashScan.close();
+	if( hashScan != null ) hashScan.close();
 	hashScan = null;
   }
 

@@ -67,7 +67,7 @@ public class FileScan extends Iterator {
    * Closes the iterator, releasing any resources (i.e. pinned pages).
    */
   public void close() {
-    heapScan.close();
+    if( heapScan != null ) heapScan.close();
     heapScan = null;
   }
 

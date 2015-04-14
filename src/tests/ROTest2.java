@@ -224,7 +224,7 @@ class ROTest2 extends TestDriver {
         } catch (Exception exc) {
 
 	       exc.printStackTrace(System.out);
-	       System.out.print("\n\nTest testKeyScan terminated because of exception.");
+	       System.out.print("\n\nTest testIndexScan terminated because of exception.");
 	       return FAIL;
 
         } finally {
@@ -263,13 +263,13 @@ class ROTest2 extends TestDriver {
 			saveCounts("end");
 
 	        // that's all folks!
-	        System.out.print("\n\nTest testProjection completed without exception.");
+	        System.out.print("\n\nTest testSelection completed without exception.");
 	        return PASS;
 
         } catch (Exception exc) {
 
 	       exc.printStackTrace(System.out);
-	       System.out.print("\n\nTest testKeyScan terminated because of exception.");
+	       System.out.print("\n\nTest testSelection terminated because of exception.");
 	       return FAIL;
 
         } finally {
@@ -310,7 +310,7 @@ class ROTest2 extends TestDriver {
         } catch (Exception exc) {
 
 	       exc.printStackTrace(System.out);
-	       System.out.print("\n\nTest testKeyScan terminated because of exception.");
+	       System.out.print("\n\nTest testProjection terminated because of exception.");
 	       return FAIL;
 
         } finally {
@@ -320,3 +320,6 @@ class ROTest2 extends TestDriver {
     }
 
 } // class ROTest extends TestDriver
+
+
+

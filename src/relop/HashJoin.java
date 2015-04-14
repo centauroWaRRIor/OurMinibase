@@ -180,9 +180,13 @@ public class HashJoin extends Iterator {
 	 * Restarts the iterator, i.e. as if it were just constructed.
 	 */
 	public void restart() {
-        init();
+        if( this.rightIndexScanCreator != null ) this.rightIndexScanCreator.close();
+        if( this.leftIndexScanCreator != null ) this.leftIndexScanCreator.close();
+
         left.restart();
         right.restart();
+
+        init();
 	}
 
 	/**
@@ -199,14 +203,13 @@ public class HashJoin extends Iterator {
 	 */
 	public void close() {
         /* close the iterators */
-		this.left.close();
-		this.right.close();
+        if( this.left != null ) this.left.close();
+		if( this.right != null ) this.right.close();
 
-        this.rightIndexScanCreator.close();
-        //System.out.printf( "closed rightindex..\n" );
+        if( this.rightIndexScanCreator != null ) this.rightIndexScanCreator.close();
+        if( this.leftIndexScanCreator != null ) this.leftIndexScanCreator.close();
 
-        this.leftIndexScanCreator.close();
-        //System.out.printf( "closed leftindex..\n" );
+        //init();
 	}
 
 	/**

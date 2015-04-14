@@ -59,7 +59,7 @@ public class IndexScan extends Iterator {
    * Closes the iterator, releasing any resources (i.e. pinned pages).
    */
   public void close() {
-	bucketScan.close();
+	if( bucketScan != null ) bucketScan.close();
 	bucketScan = null;
   }
 
