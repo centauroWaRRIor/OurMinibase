@@ -170,12 +170,12 @@ public class QEPTest extends TestDriver {
 			FileScan scan = new FileScan(s_employee, t_employee);
 			Projection pro = new Projection(scan, 1, 3);
 			pro.execute();
-			saveCounts("query1");
 
 			// destroy temp files before doing final counts
 			pro = null;
 			scan = null;
 			System.gc();
+			saveCounts("query1");
 
 			// that's all folks!
 			System.out.print("\n\nQuery 1 completed without exception.");
@@ -212,7 +212,6 @@ public class QEPTest extends TestDriver {
 			Selection sel = new Selection(scan, preds);
 			Projection pro = new Projection(sel, 1);
 			pro.execute();
-			saveCounts("query2");
 			
 			// destroy temp files before doing final counts
 			pro = null;
@@ -220,6 +219,7 @@ public class QEPTest extends TestDriver {
 			sel = null;
 			preds = null;
 			System.gc();
+			saveCounts("query2");
 
 			// that's all folks!
 			System.out.print("\n\nQuery 2 completed without exception.");
@@ -256,7 +256,6 @@ public class QEPTest extends TestDriver {
 			Selection sel = new Selection(scan, preds);
 			Projection pro = new Projection(sel, 1);
 			pro.execute();
-			saveCounts("query3");
 			
 			// destroy temp files before doing final counts
 			pro = null;
@@ -264,6 +263,7 @@ public class QEPTest extends TestDriver {
 			preds = null;
 			sel = null;
 			System.gc();
+			saveCounts("query3");
 
 			// that's all folks!
 			System.out.print("\n\nQuery 3 completed without exception.");
@@ -303,7 +303,6 @@ public class QEPTest extends TestDriver {
 			Selection selSalary = new Selection(selAge, predSalary);
 			Projection pro = new Projection(selSalary, 1);
 			pro.execute();
-			saveCounts("query4");
 			
 			// destroy temp files before doing final counts
 			pro = null;
@@ -315,6 +314,7 @@ public class QEPTest extends TestDriver {
 			selAge = null;
 			selSalary = null;
 			System.gc();
+			saveCounts("query4");
 
 			// that's all folks!
 			System.out.print("\n\nQuery 4 completed without exception.");
@@ -351,7 +351,6 @@ public class QEPTest extends TestDriver {
 	        SimpleJoin join = new SimpleJoin(scan1, scan2, preds);
 			Projection pro = new Projection(join, 3, 6);
 			pro.execute();
-			saveCounts("query5");
 			
 			// destroy temp files before doing final counts
 			pro = null;
@@ -360,6 +359,7 @@ public class QEPTest extends TestDriver {
 			preds = null;
 			join = null;
 			System.gc();
+			saveCounts("query5");
 
 			// that's all folks!
 			System.out.print("\n\nQuery 5 completed without exception.");
@@ -394,7 +394,6 @@ public class QEPTest extends TestDriver {
 	        HashJoin join = new HashJoin(scan1, scan2, 4, 0);
 			Projection pro = new Projection(join, 3, 6);
 			pro.execute();
-			saveCounts("query5");
 			
 			// destroy temp files before doing final counts
 			pro = null;
@@ -402,6 +401,7 @@ public class QEPTest extends TestDriver {
 			scan2 = null;
 			join = null;
 			System.gc();
+			saveCounts("query5");
 
 			// that's all folks!
 			System.out.print("\n\nQuery 5 (HashJoin variation) completed without exception.");
@@ -437,13 +437,13 @@ public class QEPTest extends TestDriver {
 			Selection sel = new Selection(scan, pred);
 			Projection pro = new Projection(sel, 1, 3);
 			pro.execute();
-			saveCounts("query6");
 			
 			// destroy temp files before doing final counts
 			pro = null;
 			scan = null;
 			sel = null;
 			System.gc();
+			saveCounts("query6");
 
 			// that's all folks!
 			System.out.print("\n\nQuery 6 completed without exception.");
@@ -489,8 +489,6 @@ public class QEPTest extends TestDriver {
 
 			pro.execute();
 			
-			saveCounts("query7");
-			
 			// destroy temp files before doing final counts
 			pro = null;
 			selD = null;
@@ -500,6 +498,7 @@ public class QEPTest extends TestDriver {
 			predJoin = null;
 			join = null;
 			System.gc();
+			saveCounts("query7");
 
 			// that's all folks!
 			System.out.print("\n\nQuery 7 completed without exception.");
@@ -543,8 +542,6 @@ public class QEPTest extends TestDriver {
 
 			pro.execute();
 			
-			saveCounts("query7");
-			
 			// destroy temp files before doing final counts
 			pro = null;
 			selD = null;
@@ -553,6 +550,7 @@ public class QEPTest extends TestDriver {
 			predD = null;
 			join = null;
 			System.gc();
+			saveCounts("query7");
 
 			// that's all folks!
 			System.out.print("\n\nQuery 7 (HashJoin variation) completed without exception.");
@@ -598,8 +596,6 @@ public class QEPTest extends TestDriver {
 
 			pro.execute();
 			
-			saveCounts("query8");
-			
 			// destroy temp files before doing final counts
 			pro = null;
 			scanD = null;
@@ -609,6 +605,7 @@ public class QEPTest extends TestDriver {
 			join = null;
 			sel = null;
 			System.gc();
+			saveCounts("query8");
 
 			// that's all folks!
 			System.out.print("\n\nQuery 8 completed without exception.");
