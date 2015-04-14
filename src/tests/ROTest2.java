@@ -23,7 +23,7 @@ import relop.Tuple;
 class ROTest2 extends TestDriver {
 
 	/** The display name of the test suite. */
-	private static final String TEST_NAME = "relational operator tests";
+	private static final String TEST_NAME = "Rel Operators mini mini test";
 
 	/** Size of tables in test3. */
 	private static final int SUPER_SIZE = 2000;

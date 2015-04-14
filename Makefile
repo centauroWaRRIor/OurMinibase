@@ -6,7 +6,7 @@ BINPATH = $(JDKPATH)/bin
 JAVAC = $(JDKPATH)/bin/javac 
 JAVA  = $(JDKPATH)/bin/java 
 
-PROGS = xx yy zz
+PROGS = xx yy zz ww
 
 all: $(PROGS)
 
@@ -22,5 +22,7 @@ yy : compile
 zz : compile
 	$(JAVA) -cp $(CLASSPATH):bin tests.ROTest2
 
+ww : compile
+	$(JAVA) -cp $(CLASSPATH):bin tests.ROTest3
 clean:
 	$(RM) -r bin/global bin/relop bin/tests    
