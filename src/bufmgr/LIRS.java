@@ -182,7 +182,7 @@ public class LIRS {
 	    	
 	    	recency += computeDeltaCount(globalCount);
 	    	reuseDistance = computeDeltaCount(globalCount);
-	    	weight = Integer.max(recency, reuseDistance);
+	    	weight = Math.max(recency, reuseDistance);
 	    }
 	    
 	    public Integer computeDeltaCount(Integer globalCount) {
