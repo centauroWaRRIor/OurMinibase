@@ -49,7 +49,7 @@ class CreateTable implements Plan {
     Minibase.SystemCatalog.createTable(fileName, schema);
 
     // print the output message
-    System.out.println("Table created.");
+    System.out.println("Table " + fileName + " created.");
 
   } // public void execute()
 

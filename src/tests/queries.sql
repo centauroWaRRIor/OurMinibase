@@ -50,50 +50,6 @@ SELECT * FROM Students, Grades WHERE sid = gsid AND age = 30.0;
 
 STATS
 
---------------------------------------------------------------------------------
--- Invalid Queries
-
-CREATE TABLE Courses (id INTEGER);
-CREATE TABLE IX_Age (id INTEGER);
-CREATE TABLE Bad (id INTEGER, f FLOAT, id STRING);
-CREATE TABLE Bad (id STRING(-1));
-CREATE TABLE Bad (id STRING(1024));
-CREATE TABLE Bad (id1 STRING(750), id2 STRING(750));
-
-CREATE INDEX Courses ON Grades(points);
-CREATE INDEX IX_Age ON Grades(points);
-CREATE INDEX Bad ON Unknown(secret);
-CREATE INDEX Bad ON Grades(secret);
-
-DESCRIBE Bad;
-DROP INDEX Bad;
-DROP TABLE Bad;
-
-INSERT INTO Bad VALUES (1);
-INSERT INTO Courses VALUES (1, 'two', 3);
-INSERT INTO Courses VALUES ('one', 2);
-
-DELETE Bad;
-DELETE Grades WHERE bad = 5;
-DELETE Grades WHERE gsid = 'bad';
-
-UPDATE Bad SET Id = 1;
-UPDATE Courses SET bad = 1;
-UPDATE Courses SET cid = 'bad';
-
-SELECT * FROM Grades, Bad;
-SELECT sid, bad FROM Grades, Students;
-SELECT * FROM Foo, Grades WHERE a = 1 OR points = 0.0 OR bad = 5;
-
---------------------------------------------------------------------------------
--- Odds and Ends
-
-DESCRIBE Students;
-
-UPDATE Students SET sid = 5 WHERE name = 'Chris';
-
-DELETE Students WHERE name = 'Chris';
-
 DROP INDEX IX_Age;
 DROP TABLE Students;
 DROP TABLE Courses;

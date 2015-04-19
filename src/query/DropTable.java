@@ -43,7 +43,7 @@ class DropTable implements Plan {
     Minibase.SystemCatalog.dropTable(fileName);
 
     // print the output message
-    System.out.println("Table dropped.");
+    System.out.println("Table " + fileName + " dropped.");
 
   } // public void execute()
 
