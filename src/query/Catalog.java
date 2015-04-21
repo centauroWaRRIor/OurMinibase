@@ -249,7 +249,7 @@ public class Catalog implements GlobalConst {
     // add the index catalog row
     Tuple tuple = new Tuple(s_ind);
     tuple.setAllFields(fileName, ixTable, ixColumn);
-    tuple.insertIntoFile(f_ind);
+    RID debugRID = tuple.insertIntoFile(f_ind);
 
   } // public void createIndex(String fileName, String ixTable, String ixColumn)
 
