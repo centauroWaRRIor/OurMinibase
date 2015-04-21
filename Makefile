@@ -1,5 +1,5 @@
 JDKPATH = /usr
-LIBPATH = lib/bufmgrAssign.jar
+LIBPATH = ./lib/bufmgr.jar:./lib/diskmgr.jar:./lib/heap.jar:./lib/index.jar:./lib/relop.jar
 
 CLASSPATH = .:..:$(LIBPATH)
 BINPATH = $(JDKPATH)/bin
@@ -11,10 +11,10 @@ PROGS = xx
 all: $(PROGS)
 
 compile:src/*/*.java
-	$(JAVAC) -cp $(CLASSPATH) -d bin src/*/*.java
+	$(JAVAC) -cp $(CLASSPATH) -d ./bin ./src/*/*.java
 
 xx : compile
-	$(JAVA) -cp $(CLASSPATH):bin tests.BMTest
+	$(JAVA) -cp $(CLASSPATH):./bin global.Msql ./src/tests/queries.sql
 
 clean:
-	$(RM) -r bin/diskmgr bin/bufmgr bin/tests    
+	$(RM) -r bin/global bin/parser bin/query
