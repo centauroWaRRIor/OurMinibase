@@ -187,6 +187,55 @@ public class Catalog implements GlobalConst {
 
   } // public void createTable(String fileName, Schema schema)
 
+
+  /**
+   *    helper function to get or add a number to the record count for a relation:
+   */
+  private int addOrGetRecCount(String filename, int byHowMuch) {
+      RID rid = getFileRID(filename, true);
+      if( rid == null ) {
+        return -2;
+      }
+      byte [] record = f_rel.selectRecord(rid);
+      if( record == null ) {
+          System.out.printf( "getRecCount: cannot locate record\n" );
+          return -2;
+      }
+
+      Tuple t = new Tuple(s_rel, record);
+
+      int before = t.getIntFld(1);
+
+      if( byHowMuch == 0 ) {
+          return before; 
+      } else {
+        t.setIntFld( 1, before + byHowMuch );
+        f_rel.updateRecord(rid, t.getData() );
+        return before+byHowMuch;
+      }
+  }
+
+  /**
+   * Increments the record count for the relation identified by filename
+   */
+  public int incRecCount(String filename) {
+      return addOrGetRecCount(filename, 1);
+  }
+
+  /**
+   * Decrements the record count for the relation identified by filename
+   */
+  public int decRecCount(String filename) {
+      return addOrGetRecCount(filename, -1);
+  }
+
+  /**
+   * Gets the record count for the table identified by fileName:
+   */
+  public int getRecCount(String fileName) {
+      return addOrGetRecCount(fileName, 0);
+  }
+
   /**
    * Gets the Schema for the given table.
    */
