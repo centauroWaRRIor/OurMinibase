@@ -1,13 +1,16 @@
 package query;
 
+import index.HashIndex;
 import global.AttrType;
 import global.Minibase;
 import global.RID;
+import global.SearchKey;
 import heap.HeapFile;
 import parser.AST_Insert;
 import relop.FileScan;
 import relop.Schema;
 import relop.Tuple;
+import relop.IndexScan;
 
 /**
  * Execution plan for inserting tuples.
@@ -52,7 +55,7 @@ class Insert implements Plan {
    */
   public void execute() {
 
-	  /* Create tuple to insert */
+	/* Create tuple to insert */
 	Tuple newTuple = new Tuple(schema, values);
 	
     /* Open Heap File containing table */
@@ -65,29 +68,53 @@ class Insert implements Plan {
     
     /* Update index if there is one */
     IndexDesc[] indexs = Minibase.SystemCatalog.getIndexes(fileName);
+    HashIndex hashIndex = null;
     if(indexs.length > 0)    	
     {
-    	System.out.println("The following indices were found");
     	for(int i = 0; i < indexs.length; i++) {
-    		System.out.println(indexs[i].indexName);		
+    	   /* Open the index */
+    	   hashIndex = new HashIndex(indexs[i].indexName);
+           hashIndex.insertEntry( new SearchKey( newTuple.getField(indexs[i].columnName) ), 
+        		   tuplesRID );
+       	   if(debug)
+               System.out.println("1 tuple updated at index " + indexs[i].indexName + 
+            		   " [" + indexs[i].columnName + "]");           
     	}
     }
     
     /* Update catalog statistics */
+    //TODO: Don't know how to yet
     
     /* print the output message */
     System.out.println("1 tuple insterted into " + fileName + " relation");
-
+    IndexScan indexScan;
     if(debug) {
        schema.print();
        FileScan debugScan = new FileScan(schema, fileHandle);
        while(debugScan.hasNext()) {
           debugScan.getNext().print();
        }
-       /* Prevent exception due to page still pinned when dropping table */
        debugScan = null;
-       System.gc();
+       if(indexs.length > 0)    	
+       { 
+       	  for(int i = 0; i < indexs.length; i++) {
+       	     /* Open the index */
+       	     hashIndex = new HashIndex(indexs[i].indexName);
+             System.out.println("Contents of index " + indexs[i].indexName + 
+          		   " [" + indexs[i].columnName + "]");
+    	     indexScan = new IndexScan(schema, hashIndex, fileHandle);
+             while(indexScan.hasNext()) {
+        	     indexScan.getNext().print();
+             }
+          }
+       }
     }
+    /* Prevent exception due to page still pinned when dropping table */
+    fileHandle = null;
+    hashIndex = null; // Doesn't hurt
+    indexScan = null; // Doesn't hurt
+    System.gc();
+
     
   } // public void execute()
 

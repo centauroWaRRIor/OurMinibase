@@ -14,6 +14,8 @@ INSERT INTO Students VALUES (3, 'Bob', 30.0);
 INSERT INTO Students VALUES (4, 'Andy', 50.0);
 INSERT INTO Students VALUES (5, 'Ron', 30.0);
 
+DELETE Students WHERE name = 'Chris';
+
 STATS
 
 DROP INDEX IX_Age;
