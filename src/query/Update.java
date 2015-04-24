@@ -1,9 +1,8 @@
 package query;
 
+import global.Minibase;
 import global.RID;
 import heap.HeapFile;
-
-import java.util.ArrayList;
 
 import parser.AST_Update;
 import relop.FileScan;
@@ -119,6 +118,9 @@ class Update implements Plan {
         }
     }
     
+    /* TODO: Update Indices with new values, delete old searchkeys
+     * insert new ones with new values */
+    
     if(debug) {
     	/* Reprint the table for debug */
         schema.print();
@@ -126,6 +128,8 @@ class Update implements Plan {
         while(scanner.hasNext()) {
         	scanner.getNext().print();
         }
+        System.out.println("Number of tuples for this table in catalog = " +
+        		             Minibase.SystemCatalog.getRecCount(fileName));
     }
     
     // print the output message

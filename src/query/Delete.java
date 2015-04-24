@@ -1,12 +1,16 @@
 package query;
 
+import index.HashIndex;
+
 import java.util.ArrayList;
 
+import global.Minibase;
 import global.RID;
 import global.SearchKey;
 import heap.HeapFile;
 import parser.AST_Delete;
 import relop.FileScan;
+import relop.IndexScan;
 import relop.Schema;
 import relop.Tuple;
 
@@ -97,25 +101,66 @@ class Delete implements Plan {
         	deleteRecordsArray.add(rid);
     }
     
-    /* actually delete records from heapfile */
+    /* Update indices (if any). Do this before deleting tuples since
+     * need tuples for reference at this point */
+    IndexDesc[] indexs = Minibase.SystemCatalog.getIndexes(fileName);
+    HashIndex hashIndex = null;
+    if(indexs.length > 0)    	
+    {
+    	/* Loop through all the indices */
+    	for(int i = 0; i < indexs.length; i++) {
+    	   /* Open the index */
+    	   hashIndex = new HashIndex(indexs[i].indexName);
+    	 
+    	   /* Delete from this index all the RIDs that qualified */
+    	   for(int j = 0; j < deleteRecordsArray.size(); j++) {
+    		   
+    		   Tuple tempTuple = new Tuple(schema,
+    				   fileHandle.selectRecord(deleteRecordsArray.get(j)));
+        	   hashIndex.deleteEntry( new SearchKey( tempTuple.getField(indexs[i].columnName) ), 
+        			   deleteRecordsArray.get(j));
+    	    	
+    	    }      
+    	}
+    }
+    
+    /* actually delete records from Table  */
     for(int i = 0; i < deleteRecordsArray.size(); i++)
     {
     	fileHandle.deleteRecord(deleteRecordsArray.get(i));
     }
-
-    /* Update indices */
-    //TODO:
     
     /* Update catalog statistics */
-    //TODO: Don't know how to yet
+    int tuplesCount;
+    tuplesCount = Minibase.SystemCatalog.decRecCount(fileName);
+    if(debug)
+    	System.out.println("Number of tuples for this table in catalog = " +
+                            tuplesCount);
     
+    /* Print the debug info */
+    IndexScan indexScan;
     if(debug) {
+    	/* Print contents of table */
         schema.print();
-        //FileScan debugScan = new FileScan(schema, fileHandle);
         scanner.restart();
         while(scanner.hasNext()) {
         	scanner.getNext().print();
         }
+        /* Print contents of indices */
+        if(indexs.length > 0)    	
+        { 
+        	  for(int i = 0; i < indexs.length; i++) {
+        	     /* Open the index */
+        	     hashIndex = new HashIndex(indexs[i].indexName);
+                 System.out.println("Contents of index " + indexs[i].indexName + 
+           		   " [" + indexs[i].columnName + "]");
+     	         indexScan = new IndexScan(schema, hashIndex, fileHandle);
+                 while(indexScan.hasNext()) {
+         	        indexScan.getNext().print();
+                 }
+              }
+        }
+
     }
     
     // print the output message
@@ -126,6 +171,8 @@ class Delete implements Plan {
     fileHandle = null;
     scanner = null; // Doesn't hurt
     deleteRecordsArray = null; // Doesn't hurt
+    hashIndex = null; // Doesn't hurt
+    indexScan = null; // Doesn't hurt
     System.gc();
   } // public void execute()
 

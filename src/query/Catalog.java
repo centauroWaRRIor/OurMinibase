@@ -199,7 +199,7 @@ public class Catalog implements GlobalConst {
       byte [] record = f_rel.selectRecord(rid);
       if( record == null ) {
           System.out.printf( "getRecCount: cannot locate record\n" );
-          return -2;
+          return -3;
       }
 
       Tuple t = new Tuple(s_rel, record);
@@ -218,10 +218,17 @@ public class Catalog implements GlobalConst {
   /**
    * Increments the record count for the relation identified by filename
    */
+  public int addRecCount(String filename, int howMany) {
+      return addOrGetRecCount(filename, howMany);
+  }
+  
+  /**
+   * Increments the record count for the relation identified by filename
+   */
   public int incRecCount(String filename) {
       return addOrGetRecCount(filename, 1);
   }
-
+  
   /**
    * Decrements the record count for the relation identified by filename
    */

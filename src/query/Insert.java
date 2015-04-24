@@ -1,7 +1,6 @@
 package query;
 
 import index.HashIndex;
-import global.AttrType;
 import global.Minibase;
 import global.RID;
 import global.SearchKey;
@@ -66,7 +65,7 @@ class Insert implements Plan {
     
     tuplesRID = fileHandle.insertRecord(newTuple.getData());
     
-    /* Update index if there is one */
+    /* Update indices (if any) */
     IndexDesc[] indexs = Minibase.SystemCatalog.getIndexes(fileName);
     HashIndex hashIndex = null;
     if(indexs.length > 0)    	
@@ -77,24 +76,33 @@ class Insert implements Plan {
            hashIndex.insertEntry( new SearchKey( newTuple.getField(indexs[i].columnName) ), 
         		   tuplesRID );
        	   if(debug)
-               System.out.println("1 tuple updated at index " + indexs[i].indexName + 
+               System.out.println("1 tuple inserted at index " + indexs[i].indexName + 
             		   " [" + indexs[i].columnName + "]");           
     	}
     }
     
     /* Update catalog statistics */
-    //TODO: Don't know how to yet
+    int tuplesCount;
+    tuplesCount = Minibase.SystemCatalog.incRecCount(fileName);
+    if(debug)
+    	System.out.println("Number of tuples for this table in catalog = " +
+                            tuplesCount);
+
     
     /* print the output message */
     System.out.println("1 tuple insterted into " + fileName + " relation");
+    
+    /* Print the debug info */
     IndexScan indexScan;
     if(debug) {
+       /* Print contents of table */
        schema.print();
        FileScan debugScan = new FileScan(schema, fileHandle);
        while(debugScan.hasNext()) {
           debugScan.getNext().print();
        }
        debugScan = null;
+       /* Print contents of indices */
        if(indexs.length > 0)    	
        { 
        	  for(int i = 0; i < indexs.length; i++) {
