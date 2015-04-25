@@ -64,16 +64,18 @@ class Update implements Plan {
 	 if(predicates.length > 0) {
 	   	totalAndPredicates = predicates.length;
 	 }
-	 
+	 	 
 	 /* Get tuple field values */
 	 values = tree.getValues();
 	    
 	 /* Validate existence of table */
 	 schema = QueryCheck.tableExists(fileName);
+
+	 /* Validate columns to update */
+	 QueryCheck.updateFields(schema, columnsToUpdate);
 	 
-	 /* Validate values */
-	 // TODO: Not applicable?
-	 //QueryCheck.insertValues(schema, values);
+	 /* Validate predicates */
+	 QueryCheck.predicates(schema, predicates);
 	 
 	 /* Get field numbers of attributes to update */
 	 fieldNumbers = QueryCheck.updateFields(schema, columnsToUpdate);

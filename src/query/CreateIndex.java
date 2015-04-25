@@ -44,22 +44,25 @@ class CreateIndex implements Plan {
     /* make sure the file doesn't already exist */
     indexName = tree.getFileName();
     try {
-       QueryCheck.indexExists(indexName);
+    	/* Makes sure there is no index with this name already */
+       QueryCheck.indexExists(indexName);       
     } catch (QueryException exc) {
     	/* index doesn't exist yet, ok to proceed */
     	okProceed = true;
     }
     if(!okProceed)
         throw new QueryException("index " + indexName + " already exists");
-
+    else
+    	/* Makes sure there is no table with this name already */
+        QueryCheck.fileNotExists(indexName);
+    /* Parse table name to which this index belongs */
     ixTableName = tree.getIxTable();
     QueryCheck.tableExists(ixTableName);
     
-    ixColumnName =  tree.getIxColumn();
+    /* Collect index column, schema and column number */
     ixTableSchema = Minibase.SystemCatalog.getSchema(ixTableName);
-    ixColumnNumber = QueryCheck.columnExists(ixTableSchema,
-    		                                     ixColumnName);
-    	  
+    ixColumnName =  tree.getIxColumn();
+    ixColumnNumber = QueryCheck.columnExists(ixTableSchema, ixColumnName);    	  
   } // public CreateIndex(AST_CreateIndex tree) throws QueryException
 
   /**
@@ -82,7 +85,11 @@ class CreateIndex implements Plan {
         RID rid = scanner.getLastRID();
         hashIndex.insertEntry( new SearchKey( t.getField(ixColumnNumber) ), rid );
         tupleCount++;
+        
     }
+    if(debug)
+    	System.out.println(tupleCount + " entries added to newly created" + indexName + " index.");
+    	
 
     /* add the index to the catalog */
     Minibase.SystemCatalog.createIndex(indexName, ixTableName, ixColumnName);

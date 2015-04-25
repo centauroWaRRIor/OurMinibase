@@ -59,10 +59,8 @@ class Delete implements Plan {
     }
     
     /* Validate predicates */
-    for(int i = 0; i < andPredicates; i++)
-    	/* For each AND predicate loop through all OR predicates */
-    	for(int j = 0; j < predicates[i].length; j++)
-    		predicates[i][j].validate(schema);
+    QueryCheck.predicates(schema, predicates);
+    
   } // public Delete(AST_Delete tree) throws QueryException
 
   /**
@@ -160,7 +158,6 @@ class Delete implements Plan {
                  }
               }
         }
-
     }
     
     /* print the output message */
