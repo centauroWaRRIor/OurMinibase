@@ -75,7 +75,16 @@ class Delete implements Plan {
 	/* Open table scanner */
     FileScan scanner = new FileScan(schema, fileHandle);
 
+    /* Assumption: We can hold lots of RIDs because these are 
+     * relatively small. Assuming table is not that huge so that
+     * we can still keep array of RIDs affected by this update 
+     * in main memory
+     */
     ArrayList<RID> deleteRecordsArray = new ArrayList<RID>();
+  
+    /* Keep track of indices associated with this table */
+    IndexDesc[] indexs = Minibase.SystemCatalog.getIndexes(fileName);
+    HashIndex hashIndex = null;
     
     /* Tuples that qualify predicates get marked for deletion */
     while( scanner.hasNext() ) {
@@ -97,34 +106,25 @@ class Delete implements Plan {
            	   break;
         }
         /* Add to list of records for deletion */
-        if(isDelCandidate)
-        	deleteRecordsArray.add(rid);
+        if(isDelCandidate) {
+           /* Save RID for later deletion */
+           deleteRecordsArray.add(rid);
+           /* Delete from index */
+           if(indexs.length > 0) { 	        
+              /* Loop through all the indices */
+              for(int i = 0; i < indexs.length; i++) {
+          	     /* Open the index */
+          	     hashIndex = new HashIndex(indexs[i].indexName);
+          	 
+          	     /* Delete from this index current RIDs that qualified */
+                 hashIndex.deleteEntry( new SearchKey( t.getField(indexs[i].columnName) ), 
+              	  		                rid);       	    	
+          	 }      
+          }
+       } /* End of is delete candidate */     
     }
     
-    /* Update indices (if any). Do this before deleting tuples since
-     * need tuples for reference at this point */
-    IndexDesc[] indexs = Minibase.SystemCatalog.getIndexes(fileName);
-    HashIndex hashIndex = null;
-    if(indexs.length > 0)    	
-    {
-    	/* Loop through all the indices */
-    	for(int i = 0; i < indexs.length; i++) {
-    	   /* Open the index */
-    	   hashIndex = new HashIndex(indexs[i].indexName);
-    	 
-    	   /* Delete from this index all the RIDs that qualified */
-    	   for(int j = 0; j < deleteRecordsArray.size(); j++) {
-    		   
-    		   Tuple tempTuple = new Tuple(schema,
-    				   fileHandle.selectRecord(deleteRecordsArray.get(j)));
-        	   hashIndex.deleteEntry( new SearchKey( tempTuple.getField(indexs[i].columnName) ), 
-        			   deleteRecordsArray.get(j));
-    	    	
-    	    }      
-    	}
-    }
-    
-    /* actually delete records from Table  */
+    /* do the actual deletion of records from Table here */
     for(int i = 0; i < deleteRecordsArray.size(); i++)
     {
     	fileHandle.deleteRecord(deleteRecordsArray.get(i));
@@ -163,7 +163,7 @@ class Delete implements Plan {
 
     }
     
-    // print the output message
+    /* print the output message */
     System.out.println(deleteRecordsArray.size() + " rows deleted from table " +
       fileName);
 

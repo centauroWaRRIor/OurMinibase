@@ -1,11 +1,17 @@
 package query;
 
+import index.HashIndex;
+
+import java.util.ArrayList;
+
 import global.Minibase;
 import global.RID;
+import global.SearchKey;
 import heap.HeapFile;
 
 import parser.AST_Update;
 import relop.FileScan;
+import relop.IndexScan;
 import relop.Schema;
 import relop.Tuple;
 
@@ -87,8 +93,12 @@ class Update implements Plan {
 	/* Open table scanner */
     FileScan scanner = new FileScan(schema, fileHandle);
 	    
+    /* Keep track of indices associated with this table */
+    IndexDesc[] indexs = Minibase.SystemCatalog.getIndexes(fileName);
+    HashIndex hashIndex = null;
+    
     /* Tuples that qualify predicates are updated */
-    int countUpdatedRecords = 0;
+    int updatedRows = 0;
     while( scanner.hasNext() ) {
         Tuple t = scanner.getNext();
         RID rid = scanner.getLastRID();
@@ -107,20 +117,48 @@ class Update implements Plan {
            	if(!isUpdateCandidate)
            	   break;
         }
-        /* Update this record */
+        /* Do update this record */
         if(isUpdateCandidate) {
+        	
+          /* Update this record in index if applicable */	
+          if(indexs.length > 0)    	
+          {
+          	/* Loop through all the indices */
+          	for(int i = 0; i < indexs.length; i++) {
+          	   /* Open the index */
+          	   hashIndex = new HashIndex(indexs[i].indexName);
+          	           		   
+          	   /* Walk through the list of fields to be updated */ 
+               for(int j = 0; j < fieldNumbers.length; j++) {
+             	    /* see if the index is associated with this field */
+            	   if(indexs[i].columnName == schema.fieldName(fieldNumbers[j])) {
+            	      /* Delete this index key/entry */ 
+            		   hashIndex.deleteEntry( new SearchKey( t.getField(indexs[i].columnName) ), 
+                  			   rid);
+            		   /* Insert new key/entry with updated value */
+                       hashIndex.insertEntry( new SearchKey( values[j]), rid );
+            	   }
+               }          	       
+          	}
+          } /* End of index update */
+
+          	/* Now update the record in the actual table */
         	/* Update all the fields that need to be updated */
         	for(int k = 0; k < fieldNumbers.length; k++)
         	   t.setField(fieldNumbers[k], values[k]);
         	/* Update record using updated tuple */
         	fileHandle.updateRecord(rid, t.getData());
-        	countUpdatedRecords++;
+            /* Count the number of rows affected */
+            updatedRows++;
         }
     }
     
-    /* TODO: Update Indices with new values, delete old searchkeys
-     * insert new ones with new values */
+    /* Assuming there are no STATS update to make because
+     * the row count for this table remains the same.
+     */
     
+    /* Print debug info */
+    IndexScan indexScan;
     if(debug) {
     	/* Reprint the table for debug */
         schema.print();
@@ -130,15 +168,32 @@ class Update implements Plan {
         }
         System.out.println("Number of tuples for this table in catalog = " +
         		             Minibase.SystemCatalog.getRecCount(fileName));
+        
+        /* Print contents of indices */
+        if(indexs.length > 0)    	
+        { 
+        	  for(int i = 0; i < indexs.length; i++) {
+        	     /* Open the index */
+        	     hashIndex = new HashIndex(indexs[i].indexName);
+                 System.out.println("Contents of index " + indexs[i].indexName + 
+           		   " [" + indexs[i].columnName + "]");
+     	         indexScan = new IndexScan(schema, hashIndex, fileHandle);
+                 while(indexScan.hasNext()) {
+         	        indexScan.getNext().print();
+                 }
+              }
+        }
     }
     
     // print the output message
-    System.out.println(countUpdatedRecords + " rows updated from table " +
+    System.out.println(updatedRows + " rows updated from table " +
       fileName);
 
     /* Prevent exception due to page still pinned when dropping table */
     fileHandle = null;
     scanner = null;
+    hashIndex = null;
+    indexScan = null;
     System.gc();
   } // public void execute()
 
