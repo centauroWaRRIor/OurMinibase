@@ -198,7 +198,7 @@ class Select implements Plan {
   private void buildTree() {
       initSingleTableSchemas();
 
-      nodeArray = new ArrayList<>();
+      nodeArray = new ArrayList<SelectNode>();
 
       buildFileScans();
 
@@ -283,7 +283,7 @@ class Select implements Plan {
             // this is where we push the SELECTION inside the JOIN:
             for(int tableIndex = 0; tableIndex < tables.length; tableIndex++ ) {
 
-                ArrayList<Predicate> pred_arraylist = new ArrayList<>();
+                ArrayList<Predicate> pred_arraylist = new ArrayList<Predicate>();
 
                 // go through each predicate and insert a SELECTION for that table:
                 for( int col = 0; col < or_pred.length; col++ ) {
