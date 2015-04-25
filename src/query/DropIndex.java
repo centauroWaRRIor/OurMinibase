@@ -30,11 +30,13 @@ class DropIndex implements Plan {
   public void execute() {
 
     // drop index
-    new HashIndex(indexName).deleteFile();
+    HashIndex h = new HashIndex(indexName);
+    h.deleteFile();
     Minibase.SystemCatalog.dropIndex(indexName);
 
     // print the output message
     System.out.println("Index " + indexName + " dropped.");
+    h = null;
   } // public void execute()
 
 } // class DropIndex implements Plan

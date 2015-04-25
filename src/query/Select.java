@@ -140,6 +140,32 @@ class Select implements Plan {
       this.tree = tree;
       currentTopNode = null;
 
+      /* do checks that we have proper inputs */
+
+      Schema s = new Schema(0);
+
+      try { 
+        /* validate the relations */
+        String [] tables = tree.getTables();
+        for( int i = 0; i < tables.length; i++ ) {
+            Schema s2 = QueryCheck.tableExists(tables[i]);
+            s = Schema.join(s, s2);
+        }
+
+        /* validate the columns */
+        String [] cols = tree.getColumns();
+        for( int i = 0; i < cols.length; i++ )  {
+            QueryCheck.columnExists(s, cols[i]);
+        }
+
+        /* validate the predicates */
+        Predicate [][] and_preds = tree.getPredicates();
+        QueryCheck.predicates(s, and_preds);
+      } catch( QueryException e ) {
+            s = null;
+            throw e;
+      }
+
       /* Invoke the workhorse */
       buildTree();
 

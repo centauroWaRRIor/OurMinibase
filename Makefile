@@ -14,7 +14,7 @@ compile:src/*/*.java
 	$(JAVAC) -cp $(CLASSPATH) -d ./bin ./src/*/*.java
 
 xx : compile
-	$(JAVA) -cp $(CLASSPATH):./bin global.Msql ./src/tests/queries.sql
+	$(JAVA) -cp $(CLASSPATH):./bin global.Msql ./src/tests/queries_complete.sql
 
 clean:
 	$(RM) -r bin/global bin/parser bin/query
