@@ -41,9 +41,6 @@ class Update implements Plan {
   /** Values of the tuple to update. */
   protected Object [] values;
 	
-  /** Prints debug info when enabled */
-  private static final boolean debug = true;  
-  
   /**
    * Optimizes the plan, given the parsed query.
    * 
@@ -161,7 +158,7 @@ class Update implements Plan {
     
     /* Print debug info */
     IndexScan indexScan;
-    if(debug) {
+    if(Global.DEBUG) {
     	/* Reprint the table for debug */
         schema.print();
         scanner.restart();

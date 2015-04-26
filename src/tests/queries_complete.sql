@@ -43,10 +43,49 @@ INSERT INTO Foo VALUES (1, 4, 3, 4, 6);
 -------------------------------------------------------------------------------
 -- Sample Queries
 
+select sid, name FROM Students where name='Alice';
+-- ANSWER: 1, Alice
+
 SELECT sid, name, points FROM Students, Grades WHERE sid = gsid AND points >= 3.0;
+-- 2, Chris, 4.0
+-- 1, Alice, 3.1
+-- 5, Ron, 3.0
+
 SELECT sid, name, points FROM Students, Grades WHERE sid = gsid AND points >= 3.0 OR sid = gsid AND points <= 2.5;
+-- 2, Chris, 4.0
+-- 1, Alice, 3.1
+-- 5, Ron, 3.0
+-- 3, Bob, 2.5
+
 SELECT * FROM Foo WHERE a = 1 and b = 2 or c = 3 and d = 4 and e = 5;
+-- 1, 2, 8, 4, 5
+-- 1, 5, 3, 4, 5
+
 SELECT * FROM Students, Grades WHERE sid = gsid AND age = 30.0;
+-- 3, 348, 3.1, 3, Bob, 30
+-- 5, 542, 3.0, 5, Ron, 30
+
+SELECT * FROM Students WHERE sid > 25 AND sid > 30 OR name='Student1' AND name='Student2';
+-- No Rows
+
+SELECT * FROM Students, Courses, Grades WHERE sid=gsid and gcid=cid AND sid=12;
+-- No Rows
+
+SELECT * FROM Students, Courses, Grades WHERE gsid=sid and gcid=cid AND sid=1;
+-- 348, Less Cool, 1, 348, 3.1, 1, Alice, 25.67
+
+SELECT * FROM Grades, Courses WHERE gcid=cid and title='More Fun';
+-- 542       More Fun                                          4         542       2.8       
+-- 542       More Fun                                          5         542       3.0       
+
+
+-------------------------------------------------------------------------------
+-- Sample Queries (OLD - REPLACED BY ONES ABOVE)
+
+-- SELECT sid, name, points FROM Students, Grades WHERE sid = gsid AND points >= 3.0;
+-- SELECT sid, name, points FROM Students, Grades WHERE sid = gsid AND points >= 3.0 OR sid = gsid AND points <= 2.5;
+-- SELECT * FROM Foo WHERE a = 1 and b = 2 or c = 3 and d = 4 and e = 5;
+-- SELECT * FROM Students, Grades WHERE sid = gsid AND age = 30.0;
 
 STATS
 

@@ -416,6 +416,8 @@ class Select implements Plan {
       */
 
       SelectNode newNode = null;
+      SelectNode innerNode = nodeArray.get(inner);
+      SelectNode outerNode = nodeArray.get(outer);
 
       if( recCountInner == -1 || recCountOuter == -1 ) {
         /* order does not matter in this case */
@@ -424,8 +426,16 @@ class Select implements Plan {
         /* have the relation with smaller count to be the first one to merge */
         if( recCountInner < recCountOuter ) {
             newNode = new SelectNode( nodeArray.get(inner), nodeArray.get(outer) );
+            if( Global.DEBUG ) {
+                System.out.printf( "Merging [%s] (count:%d) with [%s] (count:%d)\n",
+                            innerNode.getName(), recCountInner, outerNode.getName(), recCountOuter );
+            }
         } else {
             newNode = new SelectNode( nodeArray.get(outer), nodeArray.get(inner) );
+            if( Global.DEBUG ) {
+                System.out.printf( "Merging [%s] (count:%d) with [%s] (count:%d)\n",
+                            outerNode.getName(), recCountOuter, innerNode.getName(), recCountInner );
+            }
         }
       }
       

@@ -30,9 +30,6 @@ class CreateIndex implements Plan {
   /** Position of the column to index. */
   int ixColumnNumber;
   
-  /** Prints debug info when enabled */
-  private static final boolean debug = true;
-  
   /**
    * Optimizes the plan, given the parsed query.
    * 
@@ -87,7 +84,7 @@ class CreateIndex implements Plan {
         tupleCount++;
         
     }
-    if(debug)
+    if(Global.DEBUG)
     	System.out.println(tupleCount + " entries added to newly created" + indexName + " index.");
     	
 

@@ -31,9 +31,6 @@ class Delete implements Plan {
   /** Number of ANDed predicates */
   int andPredicates;
 	
-  /** Prints debug info when enabled */
-  private static final boolean debug = true;  
-  
   /**
    * Optimizes the plan, given the parsed query.
    * 
@@ -131,13 +128,13 @@ class Delete implements Plan {
     /* Update catalog statistics */
     int tuplesCount;
     tuplesCount = Minibase.SystemCatalog.decRecCount(fileName);
-    if(debug)
+    if(Global.DEBUG)
     	System.out.println("Number of tuples for this table in catalog = " +
                             tuplesCount);
     
     /* Print the debug info */
     IndexScan indexScan;
-    if(debug) {
+    if(Global.DEBUG) {
     	/* Print contents of table */
         schema.print();
         scanner.restart();

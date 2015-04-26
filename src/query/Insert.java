@@ -25,9 +25,6 @@ class Insert implements Plan {
   /** Values of the tuple to insert. */
   protected Object [] values;
   
-  /** Prints debug info when enabled */
-  private static final boolean debug = true;
-	
   /**
    * Optimizes the plan, given the parsed query.
    * 
@@ -75,7 +72,7 @@ class Insert implements Plan {
     	   hashIndex = new HashIndex(indexs[i].indexName);
            hashIndex.insertEntry( new SearchKey( newTuple.getField(indexs[i].columnName) ), 
         		   tuplesRID );
-       	   if(debug)
+       	   if(Global.DEBUG)
                System.out.println("1 tuple inserted at index " + indexs[i].indexName + 
             		   " [" + indexs[i].columnName + "]");           
     	}
@@ -84,17 +81,17 @@ class Insert implements Plan {
     /* Update catalog statistics */
     int tuplesCount;
     tuplesCount = Minibase.SystemCatalog.incRecCount(fileName);
-    if(debug)
+    if(Global.DEBUG)
     	System.out.println("Number of tuples for this table in catalog = " +
                             tuplesCount);
 
     
     /* print the output message */
-    System.out.println("1 tuple insterted into " + fileName + " relation");
+    System.out.println("1 tuple inserted into " + fileName + " relation");
     
     /* Print the debug info */
     IndexScan indexScan;
-    if(debug) {
+    if(Global.DEBUG) {
        /* Print contents of table */
        schema.print();
        FileScan debugScan = new FileScan(schema, fileHandle);
@@ -117,6 +114,7 @@ class Insert implements Plan {
           }
        }
     }
+
     /* Prevent exception due to page still pinned when dropping table */
     fileHandle = null;
     hashIndex = null; // Doesn't hurt
