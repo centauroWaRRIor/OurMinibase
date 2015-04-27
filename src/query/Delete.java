@@ -127,7 +127,7 @@ class Delete implements Plan {
     
     /* Update catalog statistics */
     int tuplesCount;
-    tuplesCount = Minibase.SystemCatalog.decRecCount(fileName);
+    tuplesCount = Minibase.SystemCatalog.addRecCount(fileName,-(deleteRecordsArray.size()));
     if(Global.DEBUG)
     	System.out.println("Number of tuples for this table in catalog = " +
                             tuplesCount);
