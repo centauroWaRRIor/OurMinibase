@@ -37,6 +37,7 @@ class DropIndex implements Plan {
     // print the output message
     System.out.println("Index " + indexName + " dropped.");
     h = null;
+    System.gc(); // Prevents us from getting page currently pinned exception at random times
   } // public void execute()
 
 } // class DropIndex implements Plan
