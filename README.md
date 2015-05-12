@@ -1,5 +1,5 @@
 # OurMinibase
-This is a school project for a Databases class that meant to exercise the theory behind a Relational Database's engine.
+This is a school project for a Databases class that meant to exercise the theory behind a Relational Database's engine using Java.
 
 The project was divided into 4 parts corresponding to different layers of the engine. Furthermore, each part of the project was designed so that it could be developed independently from the other parts. Therefore, each branch of this repository represents a given part of the project that is fully functional and has its own makefile. 
 
