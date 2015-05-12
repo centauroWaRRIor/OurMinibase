@@ -1,8 +1,6 @@
 # OurMinibase
-This is a school project meant to exercise the theory behind an engine for a Relational Database.
+This is a school project for a Databases class that meant to exercise the theory behind a Relational Database's engine.
 
-Aravind, I'm also kind of new to the world of github and wanted to share this tutorial I found on youtube: https://www.youtube.com/watch?v=73I5dRucCds where you can learn the fundamentals. Its a good starting point. Also check out this demo on how to do branching on git http://pcottle.github.io/learnGitBranching/?demo
+The project was divided into 4 parts corresponding to different layers of the engine. Furthermore, each part of the project was designed so that it could be developed independently from the other parts. Therefore, each branch of this repository represents a given part of the project that is fully functional and has its own makefile. 
 
-Notice that right now there a master branch and a part1 branch. As we make progress on the part1 branch we can merge onto the master branch. Think of the master branch as our golden product.
-
-Finally, on the 'part1' branch you can compile using 'make' and it should automatically compile the TestHashTable class I set up which for temp testing. For now it only diplays a message in the terminal. 
+At the end of the class we've merged all the source code into the master branch but we haven't tried to create a makefile that puts it all together into a single app. For now, only branches are fully functional.  
