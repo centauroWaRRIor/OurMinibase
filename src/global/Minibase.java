@@ -1,5 +1,6 @@
 package global;
 
+import query.Catalog;
 import bufmgr.BufMgr;
 import diskmgr.DiskMgr;
 
@@ -18,36 +19,40 @@ public class Minibase {
   /** The Minibase Buffer Manager. */
   public static BufMgr BufferManager;
 
-
+  /** The Minibase System Catalog. */
+  public static Catalog SystemCatalog;
+  
   // --------------------------------------------------------------------------
 
   /**
    * Constructs and starts an instance of Minibase, given the configuration.
-   *
+   * 
    * @param dbname Name of the data file
    * @param num_pgs Number of pages to allocate
    * @param bufpoolsize Buffer pool size (in pages)
+   * @param lookAheadSize Number of pages to be looked ahead
    * @param replacement_policy Buffer pool replacement policy
    * @param exists If the database already exists on disk
    */
-  public Minibase(String dbname, int num_pgs, int bufpoolsize,
+  public Minibase(String dbname, int num_pgs, int bufpoolsize, int lookAheadSize,
       String replacement_policy, boolean exists) {
 
     // simply initialize the database
-    init(dbname, num_pgs, bufpoolsize, replacement_policy, exists);
+    init(dbname, num_pgs, bufpoolsize, lookAheadSize, replacement_policy, exists);
 
   } // constructor
 
   /**
    * Initializes the current instance of Minibase with the given configuration.
-   *
+   * 
    * @param dbname Name of the data file
    * @param num_pgs Number of pages to allocate
    * @param bufpoolsize Buffer pool size (in pages)
+   * @param lookAheadSize Number of pages to be looked ahead
    * @param replacement_policy Buffer pool replacement policy
    * @param exists If the database already exists on disk
    */
-  public void init(String dbname, int num_pgs, int bufpoolsize,
+  public void init(String dbname, int num_pgs, int bufpoolsize, int lookAheadSize,
       String replacement_policy, boolean exists) {
 
     // save the file name
@@ -56,7 +61,7 @@ public class Minibase {
     // load the static layers
     try {
       DiskManager = new DiskMgr();
-      BufferManager = new BufMgr(bufpoolsize);
+      BufferManager = new BufMgr(bufpoolsize, lookAheadSize);
     } catch (Exception exc) {
       haltSystem(exc);
     }
@@ -65,10 +70,10 @@ public class Minibase {
     try {
       if (exists) {
         DiskManager.openDB(dbname);
-
+        SystemCatalog = new Catalog(true);
       } else {
         DiskManager.createDB(dbname, num_pgs);
-
+        SystemCatalog = new Catalog(false);
         BufferManager.flushAllPages();
       }
     } catch (Exception exc) {
